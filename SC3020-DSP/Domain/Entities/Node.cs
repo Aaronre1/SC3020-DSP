@@ -2,7 +2,7 @@ using SC3020_DSP.Domain.Common;
 
 namespace SC3020_DSP.Domain.Entities;
 
-public class Node : BaseRecord
+public class Node
 {
     public static long ByteSize => 12;
     public Pointer Pointer { get; set; } // 8

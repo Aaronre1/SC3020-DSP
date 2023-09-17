@@ -16,6 +16,13 @@ var csv = new CsvService();
 
 var records = csv.Read("Data.csv");
 
+// Store records into blocks  (Done first) 
+// Build an index 
+// Index will then point to the respective blocks 
+// Assuming all the data are non sequential 
+// Create my B+ Tree 
+
+// Initilise BPTree Object 
 foreach (var record in records)
 {
     db.Add(record);
@@ -23,12 +30,18 @@ foreach (var record in records)
 
 foreach (var block in db.GetDataBlocks())
 {
-    Console.WriteLine($"Reading block # {block.Id}");
-
+    // Console.WriteLine($"Reading block # {block.Id}");
+    // insert b+ tree
     foreach (var record in block.Items)
     {
-        Console.WriteLine(record);
+        // Console.WriteLine(record);
     }
 }
 
-Console.WriteLine(db.BytesUsed());
+Console.WriteLine("Experiment 1.");
+Console.WriteLine("Number of records"+ records.Count);
+Console.WriteLine("Size of a record"+ options.RecordSizeInBytes);
+Console.WriteLine("Number of records stored in a block"+ db.GetDataBlocks().Count());
+Console.WriteLine("Number of blocks for storing the data"+ db.GetDataBlockCapacity());
+Console.WriteLine("################################################################");
+// Console.WriteLine(db.BytesUsed());

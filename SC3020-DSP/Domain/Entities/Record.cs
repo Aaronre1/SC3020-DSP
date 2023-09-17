@@ -2,7 +2,7 @@ using SC3020_DSP.Domain.Common;
 
 namespace SC3020_DSP.Domain.Entities;
 
-public class Record : BaseRecord
+public class Record 
 {
     public DateTime GameDate { get; set; } // 8
     public int TeamId { get; set; } // 4

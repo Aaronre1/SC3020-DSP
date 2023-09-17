@@ -8,6 +8,13 @@ public class NodeBlock : BaseBlock<Node>
     
     public Pointer Pointer { get; set; }
 
+    public enum NodeType
+    {
+        RootNode,
+        InternalNode,
+        LeafNode
+    }
+
     public NodeBlock(int id, int capacity)
     {
         Id = id;
