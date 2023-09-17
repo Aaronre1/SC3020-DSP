@@ -4,14 +4,21 @@ namespace SC3020_DSP.Domain.Entities;
 
 public class DataBlock : BaseBlock<Record>
 {
-    public override int Capacity => 10;
+    public override int Capacity { get; }
 
-    public DataBlock(int id)
+    public DataBlock(int id, int capacity)
     {
         Id = id;
+        Capacity = capacity;
+        Items = new List<Record>(capacity);
     }
-    public void Add(Record record)
+    public bool Add(Record record)
     {
+        if (Items.Count == Capacity)
+        {
+            return false;
+        }
         Items.Add(record);
+        return true;
     }
 }

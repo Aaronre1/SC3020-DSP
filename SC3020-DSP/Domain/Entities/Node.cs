@@ -1,11 +1,14 @@
+using SC3020_DSP.Domain.Common;
+
 namespace SC3020_DSP.Domain.Entities;
 
-public class Node
+public class Node : BaseRecord
 {
-    public Pointer Pointer { get; set; }
-    public string Key { get; set; }
+    public static long ByteSize => 12;
+    public Pointer Pointer { get; set; } // 8
+    public int Key { get; set; } // 4
 
-    public Node(Pointer pointer, string key)
+    public Node(Pointer pointer, int key)
     {
         Pointer = pointer;
         Key = key;

@@ -3,37 +3,32 @@
 
 using SC3020_DSP.Domain;
 using SC3020_DSP.Domain.Configurations;
-using SC3020_DSP.Domain.Entities;
+using SC3020_DSP.Domain.Infrastructure;
 
-var options = new DatabaseOptions();
-var db = new Database(options)
+var options = new DatabaseOptions()
 {
-    
+    RecordSizeInBytes = 73,
+    BlockSizeInBytes = 400,
+    DiskCapacityInBytes = 500 * 1024 * 1024
 };
+var db = new Database(options);
+var csv = new CsvService();
 
+var records = csv.Read("Data.csv");
 
-for (var i = 0; i < 1000; i++)
+foreach (var record in records)
 {
-    var record = new Record()
-    {
-        GameDate = DateTime.Now,
-        TeamId = i * 123,
-        PtsHome = i
-    };
     db.Add(record);
-    
 }
 
 foreach (var block in db.GetDataBlocks())
 {
     Console.WriteLine($"Reading block # {block.Id}");
-    
+
     foreach (var record in block.Items)
     {
         Console.WriteLine(record);
     }
 }
-// Datetime // 8
-Console.WriteLine(sizeof(int)); //4
-Console.WriteLine(sizeof(decimal)); //16
-Console.WriteLine(sizeof(bool)); //1
+
+Console.WriteLine(db.BytesUsed());

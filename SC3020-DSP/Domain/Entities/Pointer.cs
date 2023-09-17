@@ -2,11 +2,11 @@ using SC3020_DSP.Domain.Common;
 
 namespace SC3020_DSP.Domain.Entities;
 
-public class Pointer : BaseRecord
+public class Pointer
 {
-    public override long Size => 8;
+    public static int ByteSize => 8;
     
-    public int BlockId { get; set; }
+    public int BlockId { get; set; } // 4
     
-    public int Offset { get; set; }
+    public int Offset { get; set; } // 4
 }

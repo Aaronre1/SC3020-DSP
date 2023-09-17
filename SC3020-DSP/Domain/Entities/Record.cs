@@ -4,21 +4,19 @@ namespace SC3020_DSP.Domain.Entities;
 
 public class Record : BaseRecord
 {
-    public override long Size => 73; //TODO: Set size
-    
     public DateTime GameDate { get; set; } // 8
     public int TeamId { get; set; } // 4
-    public int PtsHome { get; set; } // 4
+    public int? PtsHome { get; set; } // 4
 
-    public decimal FgPctHome { get; set; } // 16
+    public decimal? FgPctHome { get; set; } // 16
 
-    public decimal FtPctHome { get; set; } // 16
+    public decimal? FtPctHome { get; set; } // 16
 
-    public decimal Fg3PctHome { get; set; } // 16
+    public decimal? Fg3PctHome { get; set; } // 16
 
-    public int AstHome { get; set; } // 4
+    public int? AstHome { get; set; } // 4
 
-    public int RebHome { get; set; } // 4
+    public int? RebHome { get; set; } // 4
 
     public bool HomeTeamWins { get; set; } // 1
 
