@@ -3,6 +3,7 @@
 
 using SC3020_DSP.Domain;
 using SC3020_DSP.Domain.Configurations;
+using SC3020_DSP.Domain.Entities;
 using SC3020_DSP.Domain.Infrastructure;
 
 var options = new DatabaseOptions()

@@ -2,8 +2,9 @@ using SC3020_DSP.Domain.Common;
 
 namespace SC3020_DSP.Domain.Entities;
 
-public class Record 
+public class Record
 {
+    public decimal? Key => FgPctHome;
     public DateTime GameDate { get; set; } // 8
     public int TeamId { get; set; } // 4
     public int? PtsHome { get; set; } // 4

@@ -1,4 +1,3 @@
-using SC3020_DSP.Domain.Application;
 using SC3020_DSP.Domain.Common;
 using SC3020_DSP.Domain.Configurations;
 using SC3020_DSP.Domain.Entities;
@@ -27,15 +26,12 @@ public class Database
 
     public int GetDataBlockCapacity() => _dataBlockCapacity;
     
-    // Adding Record  
     public bool Add(Record record)
     {
         foreach (var block in GetDataBlocks())
         {
             if (block.Add(record))
             {
-                // Still can access the block entries 
-                // Manipulate for b+ tree 
                 return true;
             }
         }
@@ -52,7 +48,6 @@ public class Database
         return true;
     }
 
-    // Add Node
     public bool Add(Node node)
     {
         foreach (var block in GetNodeBlocks())
@@ -75,6 +70,20 @@ public class Database
         return true;
     }
 
+    public NodeBlock AssignNodeBlock()
+    {
+        if (_blocks.Count == _capacity)
+        {
+            throw new Exception("Database is full");
+        }
+
+        var block = new NodeBlock(_blocks.Count(), _nodeBlockCapacity);
+        _blocks.Add(block);
+        return block;
+    }
+    
+    
+
     public IEnumerable<NodeBlock> GetNodeBlocks()
     {
         foreach (var block in _blocks)
@@ -90,14 +99,12 @@ public class Database
 
     public IEnumerable<DataBlock> GetDataBlocks()
     {
-        // run 1000 times 
         foreach (var block in _blocks)
         {
             if (block.GetType() != typeof(DataBlock))
             {
                 continue;
             }
-            // 500 data block variables 
             yield return (DataBlock)block;
         }
     }
@@ -126,10 +133,10 @@ public class Database
     }
     
     
-    public BPTree createBPTree()
-    {
-        var nodeBlock = new NodeBlock(_blocks.Count, _nodeBlockCapacity);
-        var BPTree = new BPTree(nodeBlock, this);
-        return BPTree;
-    }
+    // public BpTree createBPTree()
+    // {
+    //     var nodeBlock = new NodeBlock(_blocks.Count, _nodeBlockCapacity);
+    //     var BPTree = new BpTree(nodeBlock, this);
+    //     return BPTree;
+    // }
 }
