@@ -3,7 +3,7 @@ using SC3020_DSP.Domain.Domain.Enums;
 
 namespace SC3020_DSP.Domain.Entities;
 
-public class NodeBlock : BaseBlock<Node>
+public class NodeBlock : BaseBlock<NodeBlock>
 {
     public override int Capacity { get; }
 
@@ -13,11 +13,13 @@ public class NodeBlock : BaseBlock<Node>
 
     public bool IsFull => Capacity == Items.Count;
 
+    public List<decimal?> Keys { get; } = new List<decimal?>();
+
     public NodeBlock(int id, int capacity)
     {
         Id = id;
         Capacity = capacity;
-        Items = new List<Node>(capacity);
+        Items = new List<NodeBlock>(capacity);
     }
 
     public NodeBlock()
@@ -25,17 +27,17 @@ public class NodeBlock : BaseBlock<Node>
         
     }
 
-    public bool Add(Node node)
-    {
-        if (Items.Count == Capacity)
-        {
-            return false;
-        }
-        
-        Items.Add(node);
-        Items = Items.OrderBy(i => i.Key).ToList();
-        return true;
-    }
+    // public bool Add(Node node)
+    // {
+    //     if (Items.Count == Capacity)
+    //     {
+    //         return false;
+    //     }
+    //     
+    //     Items.Add(node);
+    //     Items = Items.OrderBy(i => i.Key).ToList();
+    //     return true;
+    // }
     
     
 }

@@ -37,4 +37,13 @@
 
 
 
+    <ItemGroup>
+      <ClCompile Include="NewFile2.cpp" />
+    </ItemGroup>
+
+
+
+
+
+
 </Project>

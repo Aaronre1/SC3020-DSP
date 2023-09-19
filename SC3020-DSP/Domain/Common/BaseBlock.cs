@@ -4,7 +4,7 @@ public abstract class BaseBlock<T> : BaseBlock
 {
     public List<T> Items { get; set; } = new List<T>();
 
-    public override int Current => Items.Count;
+    public override int Count => Items.Count;
 }
 
 public abstract class BaseBlock
@@ -13,5 +13,5 @@ public abstract class BaseBlock
 
     public abstract int Capacity { get; }
 
-    public abstract int Current { get; }
+    public abstract int Count { get; }
 }

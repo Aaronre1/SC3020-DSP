@@ -48,28 +48,6 @@ public class Database
         return true;
     }
 
-    public bool Add(Node node)
-    {
-        foreach (var block in GetNodeBlocks())
-        {
-            if (block.Add(node))
-            {
-                return true;
-            }
-        }
-
-        if (_blocks.Count == _capacity)
-        {
-            Console.WriteLine("Database is full");
-            return false;
-        }
-
-        var newBlock = new NodeBlock(_blocks.Count, _nodeBlockCapacity);
-        newBlock.Add(node);
-        _blocks.Add(newBlock);
-        return true;
-    }
-
     public NodeBlock AssignNodeBlock()
     {
         if (_blocks.Count == _capacity)
@@ -117,13 +95,13 @@ public class Database
         {
             if (block.GetType() == typeof(DataBlock))
             {
-                var dataBytes = block.Current * _options.RecordSizeInBytes;
+                var dataBytes = block.Count * _options.RecordSizeInBytes;
                 result += dataBytes;
             }
 
             if (block.GetType() == typeof(NodeBlock))
             {
-                var blockBytes = block.Current * Node.ByteSize;
+                var blockBytes = block.Count * Node.ByteSize;
                 blockBytes += Pointer.ByteSize;
                 result += blockBytes;
             }
@@ -132,11 +110,4 @@ public class Database
         return result;
     }
     
-    
-    // public BpTree createBPTree()
-    // {
-    //     var nodeBlock = new NodeBlock(_blocks.Count, _nodeBlockCapacity);
-    //     var BPTree = new BpTree(nodeBlock, this);
-    //     return BPTree;
-    // }
 }
