@@ -1,2 +1,6 @@
+# Build results
 [Bb]in/
 [Oo]bj/
+
+# Jetbrains Rider cache/options directory
+.idea/
