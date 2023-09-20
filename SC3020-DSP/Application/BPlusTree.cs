@@ -10,7 +10,7 @@ public class BPlusTree
     private NodeBlock _root;
     private NodeBlock _cur;
     private NodeBlock _parent;
-    
+
     public BPlusTree(Database database)
     {
         _root = database.AssignNodeBlock();
@@ -22,6 +22,7 @@ public class BPlusTree
         NodeBlock cur = _root;
         NodeBlock parent;
 
+        //
         while (cur.NodeType == NodeType.InternalNode)
         {
             parent = cur;
@@ -64,7 +65,7 @@ public class BPlusTree
             var newLeaf = _database.AssignNodeBlock();
             newLeaf.NodeType = NodeType.LeafNode;
             // virtual node???
-            List<decimal?> virtualNode = new List<decimal?>();
+            var virtualNode = new decimal?[cur.Capacity + 1];
             for (int i = 0; i < newLeaf.Capacity; i++)
             {
                 virtualNode[i] = cur.Keys[i];
@@ -107,14 +108,48 @@ public class BPlusTree
             }
             else
             {
-                InsertInternal(newLeaf.Keys[0],parent,newLeaf);
+                InsertInternal(newLeaf.Keys[0], parent, newLeaf);
             }
-
         }
     }
 
     private void InsertInternal(decimal? key, NodeBlock cur, NodeBlock child)
     {
-        
+        if (cur.Count < cur.Capacity)
+        {
+            int i = 0;
+            while (key > cur.Keys[i] && i < cur.Count)
+            {
+                i++;
+            }
+
+            for (int j = cur.Count; j > i; j--)
+            {
+                cur.Keys[j] = cur.Keys[j - 1];
+            }
+
+            for (int j = cur.Count + 1; j > i + 1; j--)
+            {
+                cur.Items[j] = cur.Items[j - 1];
+            }
+
+            cur.Keys[i] = key;
+            cur.Items[i + 1] = child;
+        }
+        else
+        {
+            var newInternal = new NodeBlock();
+            var virtualKey = new decimal?[cur.Capacity + 1];
+            for (int i = 0; i < cur.Capacity; i++)
+            {
+                virtualKey[i] = cur.Keys[i];
+            }
+
+            var virtualItems = new NodeBlock[cur.Capacity + 2];
+            for (int i = 0; i < cur.Capacity; i++)
+            {
+                // TODO:
+            }
+        }
     }
 }
