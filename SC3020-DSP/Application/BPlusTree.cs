@@ -139,6 +139,7 @@ public class BPlusTree
         else
         {
             var newInternal = new NodeBlock();
+            newInternal.NodeType = NodeType.InternalNode;
             var virtualKey = new decimal?[cur.Capacity + 1];
             for (int i = 0; i < cur.Capacity; i++)
             {
@@ -148,8 +149,79 @@ public class BPlusTree
             var virtualItems = new NodeBlock[cur.Capacity + 2];
             for (int i = 0; i < cur.Capacity; i++)
             {
-                // TODO:
+                virtualItems[i] = cur.Items[i];
+            }
+
+            int ii = 0;
+            while (key > virtualKey[ii] && ii < cur.Capacity)
+            {
+                ii++;
+            }
+
+            for (int j = cur.Capacity + 1; j > ii; j--)
+            {
+                virtualKey[j] = virtualKey[j - 1];
+            }
+
+            virtualKey[ii] = key;
+
+            for (int j = cur.Capacity + 2; j > ii + 1; j--)
+            {
+                virtualItems[j] = virtualItems[j - 1];
+            }
+
+            virtualItems[ii + 1] = child;
+            for (int i = 0, j = cur.Count + 1; i < newInternal.Count; i++, j++)
+            {
+                newInternal.Keys[i] = virtualKey[j];
+            }
+
+            for (int i = 0, j = cur.Count + 1; i < newInternal.Count + 1; i++, j++)
+            {
+                newInternal.Items[i] = virtualItems[j];
+            }
+
+            if (cur == _root)
+            {
+                var newRoot = new NodeBlock();
+                newRoot.Keys[0] = cur.Keys[cur.Count];
+                newRoot.Items[0] = cur;
+                newRoot.Items[1] = newInternal;
+                newRoot.NodeType = NodeType.InternalNode;
+            }
+            else
+            {
+                InsertInternal(cur.Keys[cur.Count],FindParent(_root, child), newInternal);
             }
         }
+    }
+
+    private NodeBlock FindParent(NodeBlock cur, NodeBlock child)
+    {
+        NodeBlock parent = null;
+        if (cur.NodeType == NodeType.LeafNode
+            || cur.Items[0].NodeType == NodeType.LeafNode)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < cur.Count + 1; i++)
+        {
+            if (cur.Items[i] == child)
+            {
+                parent = cur;
+                return parent;
+            }
+            else
+            {
+                parent = FindParent(cur.Items[i], child);
+                if (parent != null)
+                {
+                    return parent;
+                }
+            }
+        }
+
+        return parent;
     }
 }
