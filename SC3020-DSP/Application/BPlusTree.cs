@@ -108,7 +108,7 @@ public class BPlusTree
             }
             else
             {
-                InsertInternal(newLeaf.Keys[0], parent, newLeaf);
+                // InsertInternal(newLeaf.Keys[0], parent, newLeaf);
             }
         }
     }
