@@ -270,7 +270,9 @@ void BPTree::insertInternal(int x, Node *cursor, Node *child) {
             newRoot->size = 1;
             root = newRoot;
         } else {
-            
+            // Have to recursive call to cater for building like 4 levels
+            // Like 2 levels of Internal NodeBlock (middle one la)
+            // So need to update the parents NodeBlock with the keys and etc
             insertInternal(cursor->key[cursor->size], findParent(root, cursor), newInternal);
         }
     }
@@ -278,15 +280,24 @@ void BPTree::insertInternal(int x, Node *cursor, Node *child) {
 
 // Find the parent
 Node *BPTree::findParent(Node *cursor, Node *child) {
+    // parent NodeBlock as tmp
     Node *parent;
+    // Base Case
+    // Check if new (could be) parent Node Block is a leaf Node
+    // Check if new (could be) parent Node Block is a internal pointer
+    // by checking the first ptr is pointing to a Leaf NodeBlock 
     if (cursor->IS_LEAF || (cursor->ptr[0])->IS_LEAF) {
         return NULL;
     }
+    // Meaning it is a root node
+    // will happen when its only 3 level 
     for (int i = 0; i < cursor->size + 1; i++) {
+        // check if the cursor first ptr NodeBlock(parent) is pointing to the new NodeBlock(child) 
         if (cursor->ptr[i] == child) {
             parent = cursor;
             return parent;
         } else {
+            // Recursive to check next ptr of NodeBlock(parent) 
             parent = findParent(cursor->ptr[i], child);
             if (parent != NULL)
                 return parent;
