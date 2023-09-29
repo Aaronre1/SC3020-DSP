@@ -386,43 +386,63 @@ void BPTree::remove(int x) {
       return;
     }
     // Sharing of sibiling keys
-    // read line 332 to understand the if statement 
+    // read line 332 to understand the if statement
+    // share from left sibling 
     if (leftSibling >= 0) {
       Node *leftNode = parent->ptr[leftSibling];
       // check if leaf node fulfill n/2 + 1 formula   
       if (leftNode->size >= (MAX + 1) / 2 + 1) {
-        // if yes, move all the keys to the right first   
+        // if yes, move all the keys to the right first
+        // "Cursor" is the NodeBlock we gonna use to combine to  
         for (int i = cursor->size; i > 0; i--) {
           cursor->key[i] = cursor->key[i - 1];
         }
+        // Increase capacity  
         cursor->size++;
+        // Move the pointers to the right   
         cursor->ptr[cursor->size] = cursor->ptr[cursor->size - 1];
+        // set last pointer to null ?????? 
         cursor->ptr[cursor->size - 1] = NULL;
+        // insert the new key into the cursor NodeBlock   
         cursor->key[0] = leftNode->key[leftNode->size - 1];
+        // decrement the left Node capacity  
         leftNode->size--;
+        // change the pointer index  
         leftNode->ptr[leftNode->size] = cursor;
+        // set last pointer index to null
         leftNode->ptr[leftNode->size + 1] = NULL;
+        // update parents key to "store" the cursor Nodeblock keys 
         parent->key[leftSibling] = cursor->key[0];
         return;
       }
+        
     }
+    // share from right sibling
+    // the rest is the same as above 
     if (rightSibling <= parent->size) {
       Node *rightNode = parent->ptr[rightSibling];
       if (rightNode->size >= (MAX + 1) / 2 + 1) {
         cursor->size++;
         cursor->ptr[cursor->size] = cursor->ptr[cursor->size - 1];
         cursor->ptr[cursor->size - 1] = NULL;
+        // assign the right node first key to the last index of cursor Node Block   
         cursor->key[cursor->size - 1] = rightNode->key[0];
         rightNode->size--;
         rightNode->ptr[rightNode->size] = rightNode->ptr[rightNode->size + 1];
         rightNode->ptr[rightNode->size + 1] = NULL;
+
+        // move the key to the right  
         for (int i = 0; i < rightNode->size; i++) {
           rightNode->key[i] = rightNode->key[i + 1];
         }
+        // update the new key to the parents key index  
         parent->key[rightSibling - 1] = rightNode->key[0];
         return;
       }
     }
+
+    // handle merging of internal Nodeblock
+    // similar to the above, the merge between the nodes   
     if (leftSibling >= 0) {
       Node *leftNode = parent->ptr[leftSibling];
       for (int i = leftNode->size, j = 0; j < cursor->size; i++, j++) {
@@ -435,6 +455,8 @@ void BPTree::remove(int x) {
       delete[] cursor->key;
       delete[] cursor->ptr;
       delete cursor;
+
+        
     } else if (rightSibling <= parent->size) {
       Node *rightNode = parent->ptr[rightSibling];
       for (int i = cursor->size, j = 0; j < rightNode->size; i++, j++) {
@@ -443,6 +465,7 @@ void BPTree::remove(int x) {
       cursor->ptr[cursor->size] = NULL;
       cursor->size += rightNode->size;
       cursor->ptr[cursor->size] = rightNode->ptr[rightNode->size];
+        
       cout << "Merging two leaf nodes\n";
       removeInternal(parent->key[rightSibling - 1], parent, rightNode);
       delete[] rightNode->key;
