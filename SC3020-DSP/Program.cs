@@ -1,6 +1,7 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
 
+using SC3020_DSP.Application;
 using SC3020_DSP.Domain;
 using SC3020_DSP.Domain.Configurations;
 using SC3020_DSP.Domain.Entities;
@@ -46,3 +47,19 @@ Console.WriteLine("Number of records stored in a block"+ db.GetDataBlocks().Coun
 Console.WriteLine("Number of blocks for storing the data"+ db.GetDataBlockCapacity());
 Console.WriteLine("################################################################");
 // Console.WriteLine(db.BytesUsed());
+
+IBPlusTree bptree = new BPlusTreeImpl(db);
+
+foreach (var block in db.GetDataBlocks().ToList())
+{
+    var blockId = block.Id;
+    var offset = 0;
+    foreach (var record in block.Items)
+    {
+        var pointer = new Pointer(blockId, offset);
+        
+        bptree.Add(record,pointer);
+        offset++;
+    }
+    
+}

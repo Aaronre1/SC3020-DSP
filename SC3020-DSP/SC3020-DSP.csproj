@@ -46,4 +46,21 @@
 
 
 
+
+
+
+
+
+
+
+    <ItemGroup>
+      <Compile Remove="Domain\Entities\Node.cs" />
+      <Compile Remove="Domain\Entities\InternalNode.cs" />
+    </ItemGroup>
+
+
+
+
+
+
 </Project>

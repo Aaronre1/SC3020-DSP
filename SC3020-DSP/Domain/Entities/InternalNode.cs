@@ -2,20 +2,6 @@ using SC3020_DSP.Domain.Domain.Enums;
 
 namespace SC3020_DSP.Domain.Entities;
 
-public class Node1
-{
-    public NodeType NodeType { get; set; } 
-    
-    public int Capacity { get; set; }
-
-    public List<Pointer> Pointers { get; } = new List<Pointer>();
-    
-    public List<decimal> Keys { get; } = new List<decimal>();
-
-    public int Count => Pointers.Count;
-}
-
-
 public abstract class Nodee
 {
     public abstract NodeType NodeType { get; }

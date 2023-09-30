@@ -55,7 +55,7 @@ public class BPlusTree
                 cur.Keys[j] = cur.Keys[j - 1];
             }
 
-            cur.Keys[i] = record.Key;
+            cur.Keys[i] = (decimal)record.Key;
             cur.Items[cur.Count] = cur.Items[cur.Count - 1];
             cur.Items[cur.Count - 1] = null;
         }
@@ -70,13 +70,13 @@ public class BPlusTree
             {
                 virtualNode[i] = cur.Keys[i];
             }
-
+            // slot to insert in virtual node
             int ii = 0;
             while (record.Key > virtualNode[ii] && ii < cur.Capacity)
             {
                 ii++;
             }
-
+            // right shift 
             for (int j = cur.Capacity + 1; j > ii; j--)
             {
                 virtualNode[j] = virtualNode[j - 1];
@@ -89,12 +89,12 @@ public class BPlusTree
 
             for (int i = 0; i < cur.Count; i++)
             {
-                cur.Keys[i] = virtualNode[i];
+                cur.Keys[i] = (decimal)virtualNode[i];
             }
 
             for (int i = 0, j = cur.Count; i < newLeaf.Count; i++, j++)
             {
-                newLeaf.Keys[i] = virtualNode[j];
+                newLeaf.Keys[i] = (decimal)virtualNode[j];
             }
 
             if (cur == _root)
@@ -133,7 +133,7 @@ public class BPlusTree
                 cur.Items[j] = cur.Items[j - 1];
             }
 
-            cur.Keys[i] = key;
+            cur.Keys[i] = (decimal)key;
             cur.Items[i + 1] = child;
         }
         else
@@ -173,7 +173,7 @@ public class BPlusTree
             virtualItems[ii + 1] = child;
             for (int i = 0, j = cur.Count + 1; i < newInternal.Count; i++, j++)
             {
-                newInternal.Keys[i] = virtualKey[j];
+                newInternal.Keys[i] = (decimal)virtualKey[j];
             }
 
             for (int i = 0, j = cur.Count + 1; i < newInternal.Count + 1; i++, j++)

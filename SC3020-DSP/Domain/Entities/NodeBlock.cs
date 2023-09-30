@@ -7,19 +7,24 @@ public class NodeBlock : BaseBlock<NodeBlock>
 {
     public override int Capacity { get; }
 
-    public Pointer Pointer { get; set; } = new Pointer();
+    public Pointer ParentPointer { get; set; }
 
     public NodeType NodeType { get; set; }
 
-    public bool IsFull => Capacity == Items.Count;
+    public bool IsFull => Capacity == Keys.Count();
+// 3 keys -> 3 ptr + 1 ptr
+    public decimal?[] Keys { get; }
+    
+    public override int Count => Keys.Count(x => x != null);
 
-    public List<decimal?> Keys { get; } = new List<decimal?>();
-
+    public Pointer[] Pointers { get; }
     public NodeBlock(int id, int capacity)
     {
         Id = id;
         Capacity = capacity;
         Items = new List<NodeBlock>(capacity);
+        Keys = new decimal?[capacity];
+        Pointers = new Pointer[capacity+1];
     }
 
     public NodeBlock()
@@ -27,17 +32,7 @@ public class NodeBlock : BaseBlock<NodeBlock>
         
     }
 
-    // public bool Add(Node node)
-    // {
-    //     if (Items.Count == Capacity)
-    //     {
-    //         return false;
-    //     }
-    //     
-    //     Items.Add(node);
-    //     Items = Items.OrderBy(i => i.Key).ToList();
-    //     return true;
-    // }
+    
     
     
 }
