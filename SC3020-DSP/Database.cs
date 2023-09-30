@@ -79,6 +79,10 @@ public class Database
         }
     }
 
+    public DataBlock FindDataBlock(Pointer pointer)
+    {
+        return (DataBlock)Blocks[pointer.BlockId];
+    }
     public IEnumerable<DataBlock> GetDataBlocks()
     {
         foreach (var block in Blocks)

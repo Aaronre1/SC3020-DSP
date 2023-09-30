@@ -152,25 +152,27 @@ public class BPlusTree
                 virtualItems[i] = cur.Items[i];
             }
 
-            int ii = 0;
-            while (key > virtualKey[ii] && ii < cur.Capacity)
+            // find index slot
+            int keyIndex = 0;
+            while (key > virtualKey[keyIndex] && keyIndex < cur.Capacity)
             {
-                ii++;
+                keyIndex++;
             }
 
-            for (int j = cur.Capacity + 1; j > ii; j--)
+            // right shift till index slot (keys)
+            for (int j = cur.Capacity + 1; j > keyIndex; j--)
             {
                 virtualKey[j] = virtualKey[j - 1];
             }
-
-            virtualKey[ii] = key;
-
-            for (int j = cur.Capacity + 2; j > ii + 1; j--)
+            virtualKey[keyIndex] = key; // insert key
+            
+            // right shift till index slot (ptrs)
+            for (int j = cur.Capacity + 2; j > keyIndex + 1; j--)
             {
                 virtualItems[j] = virtualItems[j - 1];
             }
-
-            virtualItems[ii + 1] = child;
+            virtualItems[keyIndex + 1] = child; // insert ptr
+            
             for (int i = 0, j = cur.Count + 1; i < newInternal.Count; i++, j++)
             {
                 newInternal.Keys[i] = (decimal)virtualKey[j];

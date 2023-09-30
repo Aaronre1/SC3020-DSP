@@ -48,7 +48,7 @@ Console.WriteLine("Number of blocks for storing the data"+ db.GetDataBlockCapaci
 Console.WriteLine("################################################################");
 // Console.WriteLine(db.BytesUsed());
 
-IBPlusTree bptree = new BPlusTreeImpl(db);
+BPlusTreeImpl bptree = new BPlusTreeImpl(db);
 
 foreach (var block in db.GetDataBlocks().ToList())
 {
@@ -61,5 +61,22 @@ foreach (var block in db.GetDataBlocks().ToList())
         bptree.Add(record,pointer);
         offset++;
     }
-    
 }
+
+foreach (var block in db.GetDataBlocks())
+{
+    foreach (var record in block.Items)
+    {
+        if (record.Key == null)
+        {
+            continue;
+        }
+        var found = bptree.Find(record.Key);
+        if (found.Key != record.Key)
+        {
+            Console.WriteLine("error");
+        }
+        Console.WriteLine($"found key {found.Key}");
+    }
+}
+
