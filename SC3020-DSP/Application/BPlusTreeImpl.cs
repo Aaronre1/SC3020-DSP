@@ -40,6 +40,7 @@ public class BPlusTreeImpl : IBPlusTree
             }
         }
     }
+
     public List<Record> Find(decimal? key)
     {
         NodeBlock cur = _root;
@@ -62,7 +63,7 @@ public class BPlusTreeImpl : IBPlusTree
                 }
             }
         }
-        
+
         int keyIndex = 0;
         while (keyIndex < _maxKeys && cur.Keys[keyIndex] != null && key > cur.Keys[keyIndex])
         {
@@ -71,7 +72,7 @@ public class BPlusTreeImpl : IBPlusTree
 
         if (cur.Keys[keyIndex] != key)
         {
-            Console.WriteLine(string.Join("|",cur.Keys));
+            Console.WriteLine(string.Join("|", cur.Keys));
             throw new Exception($"{key} not found!");
         }
 
@@ -96,11 +97,11 @@ public class BPlusTreeImpl : IBPlusTree
                 bucketBlock = null;
             }
         }
-        
+
 
         return result;
-
     }
+
     public void Add(Record record, Pointer pointer)
     {
         if (record.Key == null)
@@ -140,7 +141,7 @@ public class BPlusTreeImpl : IBPlusTree
                     cur = _database.FindNodeBlock(cur.Pointers[i + 1]);
                     break;
                 }
-                
+
                 // found key > target key && last node
                 if (i == cur.Count - 1)
                 {
@@ -164,6 +165,7 @@ public class BPlusTreeImpl : IBPlusTree
             _database.AddToBucket(pointer, cur.Pointers[keyIndex]);
             return;
         }
+
         var bucket = _database.AssignBucketBlock();
         bucket.Pointers.Add(pointer);
         // leaf node has slot
@@ -208,7 +210,7 @@ public class BPlusTreeImpl : IBPlusTree
         newLeaf.NodeType = NodeType.LeafNode;
 
         int splitIndex = (_maxKeys + 1) / 2;
-        for (int i = 0; i < _maxKeys + 1; i++) 
+        for (int i = 0; i < _maxKeys + 1; i++)
         {
             // insert left node
             if (i < splitIndex)
@@ -242,7 +244,7 @@ public class BPlusTreeImpl : IBPlusTree
         // push key up to parent
         var newChild = newLeaf;
         var newKey = newLeaf.Keys[0];
-        
+
         while (parents.Any())
         {
             var parent = parents.Pop();
@@ -251,13 +253,13 @@ public class BPlusTreeImpl : IBPlusTree
             {
                 return;
             }
-        
+
             newKey = result.Item1;
             newChild = result.Item2;
         }
     }
-    
-    private (decimal?,NodeBlock?) InsertInternal(decimal? key, NodeBlock cur, NodeBlock child)
+
+    private (decimal?, NodeBlock?) InsertInternal(decimal? key, NodeBlock cur, NodeBlock child)
     {
         var childPtr = new Pointer(child.Id);
         // Find slot to insert key
@@ -266,11 +268,13 @@ public class BPlusTreeImpl : IBPlusTree
         {
             keyIndex++;
         }
+
         // key already exists
         if (key == cur.Keys[keyIndex])
         {
             return (null, null);
         }
+
         // internal node has slot
         if (cur.Count < _maxKeys)
         {
@@ -294,18 +298,20 @@ public class BPlusTreeImpl : IBPlusTree
             tempKeys[i] = cur.Keys[i];
             tempPtrs[i] = cur.Pointers[i];
         }
+
         tempPtrs[_maxKeys] = cur.Pointers[_maxKeys];
-        
+
         // right shift till index slot
         for (int i = _maxKeys; i > keyIndex; i--)
         {
-            tempKeys[i] = tempKeys[i - 1]; 
+            tempKeys[i] = tempKeys[i - 1];
             tempPtrs[i + 1] = tempPtrs[i];
         }
+
         // insert into temp node
         tempKeys[keyIndex] = key;
         tempPtrs[keyIndex + 1] = childPtr;
-        
+
         // insert into new internal node floor (n+1/2)
         var newInternal = _database.AssignNodeBlock();
         newInternal.NodeType = NodeType.InternalNode;
@@ -322,6 +328,7 @@ public class BPlusTreeImpl : IBPlusTree
                 cur.Pointers[i + 1] = tempPtrs[i + 1];
                 continue;
             }
+
             // key to push up
             if (i == splitIndex)
             {
@@ -330,6 +337,7 @@ public class BPlusTreeImpl : IBPlusTree
                 cur.Pointers[i + 1] = null;
                 continue;
             }
+
             // insert right node
             cur.Keys[i] = null;
             cur.Pointers[i + 1] = null;
@@ -347,7 +355,68 @@ public class BPlusTreeImpl : IBPlusTree
             _root = newRoot;
             return (null, null);
         }
+
         return (splitKey, newInternal);
     }
 
+    public void Remove(decimal? key)
+    {
+        if (!key.HasValue)
+        {
+            return;
+        }
+
+        if (_root == null)
+        {
+            return;
+        }
+
+        var cur = _root;
+        var parents = new Stack<NodeBlock>();
+        int left, right;
+        while (cur.NodeType == NodeType.InternalNode)
+        {
+            for (int i = 0; i < cur.Count; i++)
+            {
+                parents.Push(cur);
+                left = i - 1;
+                right = i + 1;
+                if (key < cur.Keys[i])
+                {
+                    cur = _database.FindNodeBlock(cur.Pointers[i + 1]);
+                }
+
+                if (i == cur.Count - 1)
+                {
+                    left = i;
+                    right = i + 2;
+                    cur = _database.FindNodeBlock(cur.Pointers[i + 1]);
+                    break;
+                }
+            }
+        }
+
+        var found = false;
+        int keyIndex;
+        for (keyIndex = 0; keyIndex < cur.Count; keyIndex++)
+        {
+            if (cur.Keys[keyIndex] == key)
+            {
+                found = true;
+                break;
+            }
+        }
+
+        if (!found)
+        {
+            Console.WriteLine($"Key to remove is not found: {key}");
+            return;
+        }
+        
+        //shift keys
+        for (int i = keyIndex; i < cur.Count; i++)
+        {
+            cur.Keys[i] = cur.Keys[i + 1];
+        }
+    }
 }
