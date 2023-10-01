@@ -1,11 +1,7 @@
-namespace SC3020_DSP.Domain.Common;
 
-// public abstract class BaseBlock<T> : BaseBlock
-// {
-//     public List<T> Items { get; set; } = new List<T>();
-//
-//     public override int Count => Items.Count;
-// }
+using SC3020_DSP.Domain.Entities;
+
+namespace SC3020_DSP.Domain.Common;
 
 public abstract class BaseBlock
 {
@@ -14,4 +10,6 @@ public abstract class BaseBlock
     public abstract int Capacity { get; }
 
     public abstract int Count { get; }
+
+    public Pointer Address => new Pointer(Id);
 }

@@ -78,12 +78,12 @@ foreach (var block in db.GetDataBlocks())
         {
             continue;
         }
-        var found = bptree.Find(record.Key);
-        if (found.Key != record.Key)
-        {
-            Console.WriteLine("error");
-        }
-        Console.WriteLine($"found key {found.Key}");
+        var result = bptree.Find(record.Key);
+        
+        Console.WriteLine($"Found {result.Count} records with key {record.Key}");
     }
 }
+
+Console.WriteLine($"Actual # of records with key 0.431 : {records.Where(i=>i.Key==0.431M).Count()}");
+
 

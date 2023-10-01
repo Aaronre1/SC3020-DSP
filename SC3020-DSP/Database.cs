@@ -49,6 +49,26 @@ public class Database
         return true;
     }
 
+    public void AddToBucket(Pointer recordPtr, Pointer bucketPtr)
+    {
+        var bucket = FindBucketBlock(bucketPtr);
+        if (bucket.Count == bucket.Capacity)
+        {
+            if (bucket.OverflowBucket == null)
+            {
+                var newBucket = AssignBucketBlock();
+                bucket.OverflowBucket = newBucket.Address;
+                bucket = newBucket;
+            }
+            else
+            {
+                AddToBucket(recordPtr, bucket.OverflowBucket);
+                return;
+            }
+        }
+        bucket.Pointers.Add(recordPtr);
+    }
+    
     public NodeBlock AssignNodeBlock()
     {
         if (Blocks.Count == _capacity)
@@ -61,24 +81,29 @@ public class Database
         return block;
     }
 
+    public BucketBlock AssignBucketBlock()
+    {
+        if (Blocks.Count == _capacity)
+        {
+            throw new Exception("Database is full"); //TODO: Extract method
+        }
+
+        var block = new BucketBlock(Blocks.Count, _nodeBlockCapacity); //TODO: Bucket capacity
+        Blocks.Add(block);
+        return block;
+    }
+
 
     public NodeBlock FindNodeBlock(Pointer pointer)
     {
         return (NodeBlock)Blocks[pointer.BlockId];
     }
-    public IEnumerable<NodeBlock> GetNodeBlocks()
+
+    public BucketBlock FindBucketBlock(Pointer pointer)
     {
-        foreach (var block in Blocks)
-        {
-            if (block.GetType() != typeof(NodeBlock))
-            {
-                continue;
-            }
-
-            yield return (NodeBlock)block;
-        }
+        return (BucketBlock)Blocks[pointer.BlockId];
     }
-
+    
     public DataBlock FindDataBlock(Pointer pointer)
     {
         return (DataBlock)Blocks[pointer.BlockId];

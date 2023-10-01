@@ -40,7 +40,7 @@ public class BPlusTreeImpl : IBPlusTree
             }
         }
     }
-    public Record Find(decimal? key)
+    public List<Record> Find(decimal? key)
     {
         NodeBlock cur = _root;
         while (cur.NodeType == NodeType.InternalNode)
@@ -75,9 +75,30 @@ public class BPlusTreeImpl : IBPlusTree
             throw new Exception($"{key} not found!");
         }
 
+        var result = new List<Record>();
         var pointer = cur.Pointers[keyIndex];
-        var dataBlock = _database.FindDataBlock(pointer);
-        return dataBlock.Items[pointer.Offset];
+        var bucketBlock = _database.FindBucketBlock(pointer);
+        while (bucketBlock != null)
+        {
+            foreach (var recordPtr in bucketBlock.Pointers)
+            {
+                var dataBlock = _database.FindDataBlock(recordPtr);
+                var record = dataBlock.Items[recordPtr.Offset];
+                result.Add(record);
+            }
+
+            if (bucketBlock.OverflowBucket != null)
+            {
+                bucketBlock = _database.FindBucketBlock(bucketBlock.OverflowBucket);
+            }
+            else
+            {
+                bucketBlock = null;
+            }
+        }
+        
+
+        return result;
 
     }
     public void Add(Record record, Pointer pointer)
@@ -92,13 +113,14 @@ public class BPlusTreeImpl : IBPlusTree
             _root = _database.AssignNodeBlock();
             _root.NodeType = NodeType.LeafNode;
             _root.Keys[0] = (decimal)record.Key;
-            // TODO: Insert to bucket
-            _root.Pointers[0] = pointer;
+            // Insert to bucket
+            var rootBucket = _database.AssignBucketBlock();
+            rootBucket.Pointers.Add(pointer);
+            _root.Pointers[0] = rootBucket.Address;
             return;
         }
 
         NodeBlock cur = _root;
-        //NodeBlock parent;
         Stack<NodeBlock> parents = new Stack<NodeBlock>();
         // find leaf node to insert
         while (cur.NodeType == NodeType.InternalNode)
@@ -128,7 +150,6 @@ public class BPlusTreeImpl : IBPlusTree
             }
         }
 
-        // TODO: Find duplicate key
         // find slot index to insert key
         int keyIndex = 0;
         while (keyIndex < _maxKeys && cur.Keys[keyIndex] != null && record.Key > cur.Keys[keyIndex])
@@ -139,10 +160,12 @@ public class BPlusTreeImpl : IBPlusTree
         // target key already exists
         if (record.Key == cur.Keys[keyIndex])
         {
-            // TODO: insert to bucket
+            // insert to bucket
+            _database.AddToBucket(pointer, cur.Pointers[keyIndex]);
             return;
         }
-
+        var bucket = _database.AssignBucketBlock();
+        bucket.Pointers.Add(pointer);
         // leaf node has slot
         if (cur.Count < _maxKeys)
         {
@@ -154,8 +177,8 @@ public class BPlusTreeImpl : IBPlusTree
             }
 
             cur.Keys[keyIndex] = (decimal)record.Key;
-            // TODO: insert to bucket
-            cur.Pointers[keyIndex] = pointer;
+            // insert to bucket
+            cur.Pointers[keyIndex] = bucket.Address;
             return;
         }
 
@@ -177,7 +200,8 @@ public class BPlusTreeImpl : IBPlusTree
         }
 
         tempKeys[keyIndex] = record.Key;
-        tempPtrs[keyIndex] = pointer;
+        // insert bucket
+        tempPtrs[keyIndex] = bucket.Address;
 
         //insert into new leaf floor(n+1/2)
         var newLeaf = _database.AssignNodeBlock();
@@ -201,7 +225,7 @@ public class BPlusTreeImpl : IBPlusTree
             newLeaf.Pointers[i - splitIndex] = tempPtrs[i];
         }
 
-        cur.Pointers[_maxKeys] = new Pointer(newLeaf.Id, 0); // link next ptr
+        cur.Pointers[_maxKeys] = newLeaf.Address; // link next ptr
 
         // create new non-leaf root node
         if (cur == _root)
@@ -209,8 +233,8 @@ public class BPlusTreeImpl : IBPlusTree
             var newRoot = _database.AssignNodeBlock();
             newRoot.NodeType = NodeType.InternalNode;
             newRoot.Keys[0] = newLeaf.Keys[0];
-            newRoot.Pointers[0] = new Pointer(cur.Id);
-            newRoot.Pointers[1] = new Pointer(newLeaf.Id);
+            newRoot.Pointers[0] = cur.Address;
+            newRoot.Pointers[1] = newLeaf.Address;
             _root = newRoot;
             return;
         }
@@ -218,7 +242,6 @@ public class BPlusTreeImpl : IBPlusTree
         // push key up to parent
         var newChild = newLeaf;
         var newKey = newLeaf.Keys[0];
-        //InsertInternal2(newLeaf.Keys[0], parents.Pop(), newLeaf);
         
         while (parents.Any())
         {
@@ -233,99 +256,7 @@ public class BPlusTreeImpl : IBPlusTree
             newChild = result.Item2;
         }
     }
-
     
-    private void InsertInternal2(decimal? key, NodeBlock cur, NodeBlock child)
-    {
-        var childPtr = new Pointer(child.Id);
-        // Find slot to insert key
-        int keyIndex = 0;
-        while (keyIndex < _maxKeys && cur.Keys[keyIndex] != null && key > cur.Keys[keyIndex])
-        {
-            keyIndex++;
-        }
-        // key already exists
-        if (key == cur.Keys[keyIndex])
-        {
-            // TODO: insert to bucket
-            return;
-        }
-        // internal node has slot
-        if (cur.Count < _maxKeys)
-        {
-            // right shift keys to make space
-            for (int i = cur.Count; i > keyIndex; i--)
-            {
-                cur.Keys[i] = cur.Keys[i - 1];
-                cur.Pointers[i + 1] = cur.Pointers[i];
-            }
-
-            cur.Keys[keyIndex] = (decimal)key;
-            cur.Pointers[keyIndex + 1] = childPtr;
-            return;
-        }
-
-        // internal node is full, split node and push up middle key
-        var tempKeys = new decimal?[_maxKeys + 1];
-        var tempPtrs = new Pointer[_maxKeys + 2];
-        for (int i = 0; i < _maxKeys; i++)
-        {
-            tempKeys[i] = cur.Keys[i];
-            tempPtrs[i] = cur.Pointers[i];
-        }
-        tempPtrs[_maxKeys] = cur.Pointers[_maxKeys];
-        
-        // right shift till index slot
-        for (int i = _maxKeys; i > keyIndex; i--)
-        {
-            tempKeys[i] = tempKeys[i - 1]; 
-            tempPtrs[i + 1] = tempPtrs[i];
-        }
-        // insert into temp node
-        tempKeys[keyIndex] = key;
-        tempPtrs[keyIndex + 1] = childPtr;
-        
-        // insert into new leaf floor (n/2)
-        var newInternal = _database.AssignNodeBlock();
-        newInternal.NodeType = NodeType.InternalNode;
-
-        int splitIndex = (_maxKeys + 1) / 2; // n=3 => 2
-        decimal? splitKey = tempKeys[splitIndex];
-        cur.Pointers[0] = tempPtrs[0];
-        for (int i = 0; i < _maxKeys + 1; i++)
-        {
-            // insert left node
-            if (i < splitIndex)
-            {
-                cur.Keys[i] = tempKeys[i];
-                cur.Pointers[i + 1] = tempPtrs[i + 1];
-                continue;
-            }
-            // key to push up
-            if (i == splitIndex)
-            {
-                newInternal.Pointers[0] = tempPtrs[splitIndex];
-                continue;
-            }
-            // insert right node
-            cur.Keys[i] = null;
-            cur.Pointers[i + 1] = null;
-            newInternal.Keys[i - splitIndex - 1] = tempKeys[i];
-            newInternal.Pointers[i - splitIndex] = tempPtrs[i + 1];
-        }
-
-        if (cur == _root)
-        {
-            var newRoot = _database.AssignNodeBlock();
-            newRoot.NodeType = NodeType.InternalNode;
-            newRoot.Keys[0] = splitKey;
-            newRoot.Pointers[0] = new Pointer(cur.Id);
-            newRoot.Pointers[1] = new Pointer(newInternal.Id);
-            _root = newRoot;
-            return;
-        }
-        InsertInternal2(splitKey,_database.FindNodeBlock(FindParent(new Pointer(_root.Id),new Pointer(child.Id))) ,newInternal);
-    }
     private (decimal?,NodeBlock?) InsertInternal(decimal? key, NodeBlock cur, NodeBlock child)
     {
         var childPtr = new Pointer(child.Id);
@@ -338,7 +269,6 @@ public class BPlusTreeImpl : IBPlusTree
         // key already exists
         if (key == cur.Keys[keyIndex])
         {
-            // TODO: insert to bucket
             return (null, null);
         }
         // internal node has slot
@@ -376,11 +306,11 @@ public class BPlusTreeImpl : IBPlusTree
         tempKeys[keyIndex] = key;
         tempPtrs[keyIndex + 1] = childPtr;
         
-        // insert into new leaf floor (n/2)
+        // insert into new internal node floor (n+1/2)
         var newInternal = _database.AssignNodeBlock();
         newInternal.NodeType = NodeType.InternalNode;
 
-        int splitIndex = (_maxKeys + 1) / 2; // n=3 => 2
+        int splitIndex = (_maxKeys + 1) / 2;
         decimal? splitKey = tempKeys[splitIndex];
         cur.Pointers[0] = tempPtrs[0];
         for (int i = 0; i < _maxKeys + 1; i++)
@@ -420,31 +350,4 @@ public class BPlusTreeImpl : IBPlusTree
         return (splitKey, newInternal);
     }
 
-    private Pointer FindParent(Pointer cur, Pointer child)
-    {
-        Pointer parent = null;
-        var curNode = _database.FindNodeBlock(cur);
-        if (curNode.NodeType == NodeType.LeafNode ||
-            _database.FindNodeBlock(curNode.Pointers[0]).NodeType == NodeType.LeafNode)
-        {
-            return null;
-        }
-
-        for (int i = 0; i < curNode.Count + 1; i++)
-        {
-            if (curNode.Pointers[i] == child)
-            {
-                parent = cur;
-                return parent;
-            }
-
-            parent = FindParent(curNode.Pointers[i], child);
-            if (parent != null)
-            {
-                return parent;
-            }
-        }
-
-        return parent;
-    }
 }
