@@ -50,6 +50,9 @@ Console.WriteLine("#############################################################
 
 BPlusTreeImpl bptree = new BPlusTreeImpl(db);
 
+
+
+
 foreach (var block in db.GetDataBlocks().ToList())
 {
     var blockId = block.Id;
@@ -57,11 +60,15 @@ foreach (var block in db.GetDataBlocks().ToList())
     foreach (var record in block.Items)
     {
         var pointer = new Pointer(blockId, offset);
-        
+        //Console.WriteLine($"Insert:{record.Key}");
         bptree.Add(record,pointer);
         offset++;
+        //bptree.Print();
+        //Console.WriteLine("===");
     }
 }
+
+bptree.Print();
 
 foreach (var block in db.GetDataBlocks())
 {

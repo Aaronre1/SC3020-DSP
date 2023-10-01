@@ -173,6 +173,7 @@ public class BPlusTree
             }
             virtualItems[keyIndex + 1] = child; // insert ptr
             
+            // 
             for (int i = 0, j = cur.Count + 1; i < newInternal.Count; i++, j++)
             {
                 newInternal.Keys[i] = (decimal)virtualKey[j];
