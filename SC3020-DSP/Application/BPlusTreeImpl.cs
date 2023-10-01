@@ -48,7 +48,7 @@ public class BPlusTreeImpl : IBPlusTree
             for (int i = 0; i < cur.Count; i++)
             {
                 // found key <= target key
-                if (key <= cur.Keys[i])
+                if (key < cur.Keys[i])
                 {
                     cur = _database.FindNodeBlock(cur.Pointers[i]);
                     break;
@@ -71,6 +71,7 @@ public class BPlusTreeImpl : IBPlusTree
 
         if (cur.Keys[keyIndex] != key)
         {
+            Console.WriteLine(string.Join("|",cur.Keys));
             throw new Exception($"{key} not found!");
         }
 
@@ -394,7 +395,9 @@ public class BPlusTreeImpl : IBPlusTree
             // key to push up
             if (i == splitIndex)
             {
-                newInternal.Pointers[0] = tempPtrs[splitIndex];
+                newInternal.Pointers[0] = tempPtrs[splitIndex + 1];
+                cur.Keys[i] = null;
+                cur.Pointers[i + 1] = null;
                 continue;
             }
             // insert right node
