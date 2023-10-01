@@ -314,6 +314,7 @@ void BPTree::remove(int x) {
     Node *parent;
     int leftSibling, rightSibling;
     // shuffling thru all the NodeBlock to find the key(x) 
+    // and is at internal NodeBlock and root NodeBlock level only 
     while (cursor->IS_LEAF == false) {
       // Look for the key by comparing all the level of NodeBlock  
       for (int i = 0; i < cursor->size; i++) {
@@ -386,7 +387,10 @@ void BPTree::remove(int x) {
       return;
     }
     // Sharing of sibiling keys
-    // read line 332 to understand the if statement
+    // this is when the Leaf NodeBlock that he is sharing from has 
+    // more than enough to share
+    // e.g. Minimum number is 2 keys for a Leaf Node
+    // but currently the Leaf Node has 3, so can spare 1
     // share from left sibling 
     if (leftSibling >= 0) {
       Node *leftNode = parent->ptr[leftSibling];
@@ -441,27 +445,47 @@ void BPTree::remove(int x) {
       }
     }
 
-    // handle merging of internal Nodeblock
+    
     // similar to the above, the merge between the nodes   
+    // this is when the Leaf NodeBlock that he is sharing from has 
+    // NOT enough to share 
+    // e.g. Minimum number is 2 keys for a Leaf Node
+    // but currently the Leaf Node has 2, so he cannot spare
+    // Check if there is a need to combine the cursor NodeBlock and Left NodeBlock together 
     if (leftSibling >= 0) {
+      // New left NodeBlock to store the internal NodeBlock 
       Node *leftNode = parent->ptr[leftSibling];
+      // i as the left NodeBlock Capacity
+      // j as the current NodeBlock pointed at(can imagine as it is the right NodeBlock)
+      // so is trying to merge both of them together 
       for (int i = leftNode->size, j = 0; j < cursor->size; i++, j++) {
+        // move the current(cursor) NodeBlock keys into the left NodeBlock
         leftNode->key[i] = cursor->key[j];
       }
+      // after merging the keys 
+      // set the last pointer of the left Node Block to null
       leftNode->ptr[leftNode->size] = NULL;
+      // update the size after combining with cursor 
       leftNode->size += cursor->size;
+      // update the left NodeBlock pointer to the cursor's pointers 
       leftNode->ptr[leftNode->size] = cursor->ptr[cursor->size];
+      // since one of the leaf Node Block is gone, 
+      // have to update the parent Internal nodes 
       removeInternal(parent->key[leftSibling], parent, cursor);
       delete[] cursor->key;
       delete[] cursor->ptr;
       delete cursor;
 
-        
-    } else if (rightSibling <= parent->size) {
+    } 
+    // same logic as the left node, now implementing right node     
+    else if (rightSibling <= parent->size) {
       Node *rightNode = parent->ptr[rightSibling];
       for (int i = cursor->size, j = 0; j < rightNode->size; i++, j++) {
         cursor->key[i] = rightNode->key[j];
       }
+      // combine into cursor for this instance
+      // taking from right side
+      // same logic at left node 
       cursor->ptr[cursor->size] = NULL;
       cursor->size += rightNode->size;
       cursor->ptr[cursor->size] = rightNode->ptr[rightNode->size];
@@ -523,8 +547,14 @@ void BPTree::removeInternal(int x, Node *cursor, Node *child) {
   }
   if (cursor == root)
     return;
+
+  // to "borrow" from the internal level Node Block 
+  // Find the parent node so can update the pointers 
   Node *parent = findParent(root, cursor);
   int leftSibling, rightSibling;
+  // loop thru the parents pointers and find the 
+  // correct cursor LeafNode Index
+  // Initialise the left and right sibling position index
   for (pos = 0; pos < parent->size + 1; pos++) {
     if (parent->ptr[pos] == cursor) {
       leftSibling = pos - 1;
@@ -532,54 +562,96 @@ void BPTree::removeInternal(int x, Node *cursor, Node *child) {
       break;
     }
   }
+
+  // when is >= n/2 
+  // (so is basically just borrowing from neighbour)
   if (leftSibling >= 0) {
     Node *leftNode = parent->ptr[leftSibling];
+    //check if the internal node has a size of n/2 
     if (leftNode->size >= (MAX + 1) / 2) {
+      // move the keys to the right 
       for (int i = cursor->size; i > 0; i--) {
         cursor->key[i] = cursor->key[i - 1];
       }
+
+      // reassign the first cursor key to the parents key of left sibling index
       cursor->key[0] = parent->key[leftSibling];
+      // update the parent key to the new internal node key (since gonna minus one key )
       parent->key[leftSibling] = leftNode->key[leftNode->size - 1];
+      // update the pointer by moving to the right 
       for (int i = cursor->size + 1; i > 0; i--) {
         cursor->ptr[i] = cursor->ptr[i - 1];
       }
+      // update the new key's pointers 
       cursor->ptr[0] = leftNode->ptr[leftNode->size];
+      // update capacity 
       cursor->size++;
       leftNode->size--;
       return;
     }
   }
+  // same as the left sibling
   if (rightSibling <= parent->size) {
     Node *rightNode = parent->ptr[rightSibling];
+        //check if the internal node has a size of n/2 
     if (rightNode->size >= (MAX + 1) / 2) {
+      // basically update the internal node key and parent key
+      //  change the cursor key with the parent key 
       cursor->key[cursor->size] = parent->key[pos];
+      // change the parent key to the right node key 
       parent->key[pos] = rightNode->key[0];
+
+      // move the keys to the left 
       for (int i = 0; i < rightNode->size - 1; i++) {
         rightNode->key[i] = rightNode->key[i + 1];
       }
+      // set the ptr of the rightNode Node block into 
+      //cursor next available ptr
       cursor->ptr[cursor->size + 1] = rightNode->ptr[0];
+      // update the pointer of the rightNode NodeBlock
+      // by shifting left 
       for (int i = 0; i < rightNode->size; ++i) {
         rightNode->ptr[i] = rightNode->ptr[i + 1];
       }
+      // update capacity 
       cursor->size++;
       rightNode->size--;
       return;
     }
   }
+
+
+  // will reach here if internal node has less than n/2 
+  // basically doing merging between internal nodes since ^ 
   if (leftSibling >= 0) {
     Node *leftNode = parent->ptr[leftSibling];
     leftNode->key[leftNode->size] = parent->key[leftSibling];
+    // i = capacity of NodeBlock + 1 
+    // j = start 
+    // cursor is the one he wanna merge to the left Node Block 
+    // e.g. i = 4(+1), j = 0; j < cursorsize(1); j++ 
+    // cursor->size is ALWAYS gonna be smaller than leftNode->size
+    // if not the cursor wont be gone (so can merge into the left NodeBlock)
+
+    // Move the cursor's keys into left Node Block key 
     for (int i = leftNode->size + 1, j = 0; j < cursor->size; j++) {
       leftNode->key[i] = cursor->key[j];
     }
+    // Move the cursor's ptr into left Node Block ptr
+    // after that set cursor last ptr to null 
     for (int i = leftNode->size + 1, j = 0; j < cursor->size + 1; j++) {
       leftNode->ptr[i] = cursor->ptr[j];
       cursor->ptr[j] = NULL;
     }
+    // update the cursor capacity into left Node 
     leftNode->size += cursor->size + 1;
     cursor->size = 0;
+    // why need to recursive?? dont unds 
     removeInternal(parent->key[leftSibling], parent, cursor);
-  } else if (rightSibling <= parent->size) {
+  } 
+  // same as the above, but for now is to do for right sibling 
+  // logic is the same uh. 
+  else if (rightSibling <= parent->size) {
     Node *rightNode = parent->ptr[rightSibling];
     cursor->key[cursor->size] = parent->key[rightSibling - 1];
     for (int i = cursor->size + 1, j = 0; j < rightNode->size; j++) {
