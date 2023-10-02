@@ -17,11 +17,11 @@ public class Database
         _options = options;
         _capacity = (int)(options.DiskCapacityInBytes / options.BlockSizeInBytes);
         Blocks = new List<BaseBlock>(_capacity);
-         Console.WriteLine($"Initialized database with {_capacity} blocks capacity.");
+      Console.WriteLine($"Initialized database with {_capacity} blocks capacity.");
 
        // _nodeBlockCapacity = (int)(options.BlockSizeInBytes / Node.ByteSize);
        _nodeBlockCapacity = 10;
-        Console.WriteLine(_nodeBlockCapacity);
+      //  Console.WriteLine(_nodeBlockCapacity);
         _dataBlockCapacity = (int)(options.BlockSizeInBytes / options.RecordSizeInBytes);
     }
 

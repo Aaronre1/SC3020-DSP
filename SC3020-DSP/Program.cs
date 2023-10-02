@@ -7,6 +7,8 @@ using SC3020_DSP.Domain.Configurations;
 using SC3020_DSP.Domain.Entities;
 using SC3020_DSP.Domain.Infrastructure;
 
+// Requirements on on project
+// RecordSizeInBytes are determined by inspecting the data manually 
 var options = new DatabaseOptions()
 {
     RecordSizeInBytes = 73,
@@ -23,6 +25,7 @@ var records = csv.Read("Data.csv");
 // Index will then point to the respective blocks 
 // Assuming all the data are non sequential 
 // Create my B+ Tree 
+// records are packed in unspanned method  
 
 // Initilise BPTree Object 
 foreach (var record in records)
@@ -40,11 +43,11 @@ foreach (var block in db.GetDataBlocks())
     }
 }
 
-Console.WriteLine("Experiment 1.");
-Console.WriteLine("Number of records"+ records.Count);
-Console.WriteLine("Size of a record"+ options.RecordSizeInBytes);
-Console.WriteLine("Number of records stored in a block"+ db.GetDataBlocks().Count());
-Console.WriteLine("Number of blocks for storing the data"+ db.GetDataBlockCapacity());
+Console.WriteLine("*********************Experiment 1*****************************");
+Console.WriteLine("Number of records: "+ records.Count);
+Console.WriteLine("Size of a record: "+ options.RecordSizeInBytes); 
+Console.WriteLine("Number of records stored in a block: "+ db.GetDataBlockCapacity());
+Console.WriteLine("Number of blocks for storing the data: "+ db.GetDataBlocks().Count());
 Console.WriteLine("################################################################");
 // Console.WriteLine(db.BytesUsed());
 
@@ -80,7 +83,7 @@ foreach (var block in db.GetDataBlocks())
         }
         var result = bptree.Find(record.Key);
         
-        Console.WriteLine($"Found {result.Count} records with key {record.Key}");
+      //  Console.WriteLine($"Found {result.Count} records with key {record.Key}");
     }
 }
 
