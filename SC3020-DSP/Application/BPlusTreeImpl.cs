@@ -373,7 +373,7 @@ public class BPlusTreeImpl : IBPlusTree
 
         var cur = _root;
         var parents = new Stack<NodeBlock>();
-        int left, right;
+        int left=0, right=0;
         while (cur.NodeType == NodeType.InternalNode)
         {
             for (int i = 0; i < cur.Count; i++)
@@ -418,5 +418,160 @@ public class BPlusTreeImpl : IBPlusTree
         {
             cur.Keys[i] = cur.Keys[i + 1];
         }
+
+        if (cur == _root)
+        {
+            for (int i = 0; i < _maxKeys + 1; i++)
+            {
+                cur.Pointers[i] = null;
+            }
+
+            if (cur.Count == 0)
+            {
+                // TODO: delete dead tree
+                _root = null;
+            }
+            return;
+        }
+
+        cur.Pointers[cur.Count] = cur.Pointers[cur.Count + 1];
+        cur.Pointers[cur.Count + 1] = null;
+        if (cur.Count >= (_maxKeys + 1) / 2)
+        {
+            return;
+        }
+
+
+        if (left >= 0)
+        {
+            var leftNode = _database.FindNodeBlock(parents.Peek().Pointers[left]);
+            if (leftNode.Count >= (_maxKeys + 1 / 2 + 1))
+            {
+                for (int i = cur.Count; i > 0; i--)
+                {
+                    cur.Keys[i] = cur.Keys[i - 1];
+                }
+
+                cur.Pointers[cur.Count+1] = cur.Pointers[cur.Count];
+                cur.Pointers[cur.Count] = null;
+                cur.Keys[0] = leftNode.Keys[leftNode.Count - 1];
+
+                leftNode.Pointers[leftNode.Count-1] = cur.Address;
+                leftNode.Pointers[leftNode.Count] = null;
+                parents.Peek().Keys[left] = cur.Keys[0];
+                return;
+            }
+        }
+        // share from right sibling
+        if (right <= parents.Peek().Count)
+        {
+            var rightNode = _database.FindNodeBlock(parents.Peek().Pointers[right]);
+            if (rightNode.Count >= (_maxKeys + 1) / 2 + 1)
+            {
+                cur.Pointers[cur.Count + 1] = cur.Pointers[cur.Count];
+                cur.Pointers[cur.Count] = null;
+
+                cur.Keys[cur.Count - 1] = rightNode.Keys[0];
+
+                rightNode.Pointers[rightNode.Count - 1] = rightNode.Pointers[rightNode.Count];
+                rightNode.Pointers[rightNode.Count] = null;
+
+                for (var i = 0; i < rightNode.Count; i++)
+                {
+                    rightNode.Keys[i] = rightNode.Keys[i + 1];
+                }
+
+                parents.Peek().Keys[right - 1] = rightNode.Keys[0];
+                return;
+            }
+        }
+
+        if (left >= 0)
+        {
+            var leftNode = _database.FindNodeBlock(parents.Peek().Pointers[left]);
+            for (int i = leftNode.Count, j = 0; j < cur.Count; i++, j++)
+            {
+                leftNode.Keys[i] = cur.Keys[j];
+            }
+
+            leftNode.Pointers[leftNode.Count] = null;
+            leftNode.Pointers[leftNode.Count] = cur.Pointers[cur.Count];
+            
+            //TODO: RemoveInternal()
+            //TODO: Delete cur
+        }
+        else if (right <= parents.Peek().Count)
+        {
+            var rightNode = _database.FindNodeBlock(parents.Peek().Pointers[right]);
+            for (int i = cur.Count, j = 0; j < rightNode.Count; i++, j++)
+            {
+                cur.Keys[i] = rightNode.Keys[j];
+            }
+
+            cur.Pointers[cur.Count] = null;
+            cur.Pointers[cur.Count] = rightNode.Pointers[rightNode.Count];
+            //TODO: RemoveInternal()
+            //TODO: Delte cur
+        }
     }
+
+    private void RemoveInternal(int key, NodeBlock cur, NodeBlock child)
+    {
+        if (cur == _root)
+        {
+            if (cur.Count == 1)
+            {
+                if (cur.Pointers[1] == child.Address)
+                {
+                    _root = _database.FindNodeBlock(cur.Pointers[0]);
+                    return;
+                }
+                else if (cur.Pointers[0] == child.Address)
+                {
+                    _root = _database.FindNodeBlock(cur.Pointers[1]);
+                }
+            }
+        }
+
+        int pos = 0;
+        for (pos = 0; pos < cur.Count; pos++)
+        {
+            if (cur.Keys[pos] == key)
+            {
+                break;
+            }
+        }
+
+        for (int i = pos; i < cur.Count; i++)
+        {
+            cur.Keys[i] = cur.Keys[i + 1];
+        }
+
+        for (pos = 0; pos < cur.Count + 1; pos++)
+        {
+            if (cur.Pointers[pos] == child.Address)
+            {
+                break;
+            }
+        }
+
+        for (int i = pos; i < cur.Count + 1; i++)
+        {
+            cur.Pointers[i] = cur.Pointers[i + 1];
+        }
+
+        if (cur.Count - 1 >= (_maxKeys + 1) / 2 - 1)
+        {
+            return;
+        }
+
+        if (cur == _root)
+        {
+            return;
+        }
+        
+        // TODO: Parent stack 
+    }
+    
+    
 }
