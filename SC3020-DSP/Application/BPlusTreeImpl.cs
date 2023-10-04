@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using SC3020_DSP.Application.Models;
 using SC3020_DSP.Domain;
 using SC3020_DSP.Domain.Domain.Enums;
 using SC3020_DSP.Domain.Entities;
@@ -15,6 +17,10 @@ public class BPlusTreeImpl : IBPlusTree
     {
         _database = database;
     }
+    
+    public int N { get; private set; }
+    public int Levels { get; private set; }
+    public NodeBlock Root => _root;
 
     public void Print()
     {
@@ -41,9 +47,14 @@ public class BPlusTreeImpl : IBPlusTree
         }
     }
 
-    public List<Record> Find(decimal? key)
+    public FindResultModel Find(decimal? key)
     {
+        var sw = new Stopwatch();
+        sw.Start();
+        var result = new FindResultModel();
+        
         NodeBlock cur = _root;
+        result.IndexNodeAccessed++;
         while (cur.NodeType == NodeType.InternalNode)
         {
             for (int i = 0; i < cur.Count; i++)
@@ -52,6 +63,7 @@ public class BPlusTreeImpl : IBPlusTree
                 if (key < cur.Keys[i])
                 {
                     cur = _database.FindNodeBlock(cur.Pointers[i]);
+                    result.IndexNodeAccessed++;
                     break;
                 }
 
@@ -59,6 +71,7 @@ public class BPlusTreeImpl : IBPlusTree
                 if (i == cur.Count - 1)
                 {
                     cur = _database.FindNodeBlock(cur.Pointers[i + 1]);
+                    result.IndexNodeAccessed++;
                     break;
                 }
             }
@@ -76,7 +89,7 @@ public class BPlusTreeImpl : IBPlusTree
             throw new Exception($"{key} not found!");
         }
 
-        var result = new List<Record>();
+        //var result = new List<Record>();
         var pointer = cur.Pointers[keyIndex];
         var bucketBlock = _database.FindBucketBlock(pointer);
         while (bucketBlock != null)
@@ -84,8 +97,10 @@ public class BPlusTreeImpl : IBPlusTree
             foreach (var recordPtr in bucketBlock.Pointers)
             {
                 var dataBlock = _database.FindDataBlock(recordPtr);
+                // TODO: does multiple access to same data block count as separate access?
                 var record = dataBlock.Items[recordPtr.Offset];
-                result.Add(record);
+                result.Records.Add(record);
+                result.DataBlockAccessed++;
             }
 
             if (bucketBlock.OverflowBucket != null)
@@ -97,8 +112,9 @@ public class BPlusTreeImpl : IBPlusTree
                 bucketBlock = null;
             }
         }
-
-
+        
+        sw.Stop();
+        result.Ticks = sw.ElapsedTicks;
         return result;
     }
 
@@ -118,6 +134,7 @@ public class BPlusTreeImpl : IBPlusTree
             var rootBucket = _database.AssignBucketBlock();
             rootBucket.Pointers.Add(pointer);
             _root.Pointers[0] = rootBucket.Address;
+            Levels++;
             return;
         }
 
@@ -238,6 +255,7 @@ public class BPlusTreeImpl : IBPlusTree
             newRoot.Pointers[0] = cur.Address;
             newRoot.Pointers[1] = newLeaf.Address;
             _root = newRoot;
+            Levels++;
             return;
         }
 
@@ -353,6 +371,7 @@ public class BPlusTreeImpl : IBPlusTree
             newRoot.Pointers[0] = new Pointer(cur.Id);
             newRoot.Pointers[1] = new Pointer(newInternal.Id);
             _root = newRoot;
+            Levels++;
             return (null, null);
         }
 

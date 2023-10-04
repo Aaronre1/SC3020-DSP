@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using SC3020_DSP.Application.Models;
 using SC3020_DSP.Domain.Common;
 using SC3020_DSP.Domain.Configurations;
 using SC3020_DSP.Domain.Entities;
@@ -108,6 +110,28 @@ public class Database
     {
         return (DataBlock)Blocks[pointer.BlockId];
     }
+
+    public FindResultModel FindRecords(decimal key)
+    {
+        var result = new FindResultModel();
+        var sw = new Stopwatch();
+        sw.Start();
+        foreach (var block in GetDataBlocks())
+        {
+            foreach (var record in block.Items)
+            {
+                if (record.Key == key)
+                {
+                    result.Records.Add(record);
+                }
+            }
+
+            result.DataBlockAccessed++;
+        }
+        sw.Stop();
+        result.Ticks = sw.ElapsedTicks;
+        return result;
+    }
     public IEnumerable<DataBlock> GetDataBlocks()
     {
         foreach (var block in Blocks)
@@ -117,6 +141,19 @@ public class Database
                 continue;
             }
             yield return (DataBlock)block;
+        }
+    }
+
+    public IEnumerable<NodeBlock> GetNodeBlocks()
+    {
+        foreach (var block in Blocks)
+        {
+            if (block.GetType() != typeof(NodeBlock))
+            {
+                continue;
+            }
+
+            yield return (NodeBlock)block;
         }
     }
 
