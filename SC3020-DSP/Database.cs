@@ -132,6 +132,28 @@ public class Database
         result.Ticks = sw.ElapsedTicks;
         return result;
     }
+
+    public FindResultModel FindRecords(decimal from, decimal to)
+    {
+        var result = new FindResultModel();
+        var sw = new Stopwatch();
+        sw.Start();
+        foreach (var block in GetDataBlocks())
+        {
+            foreach (var record in block.Items)
+            {
+                if (record.Key >= from && record.Key <= to)
+                {
+                    result.Records.Add(record);
+                }
+            }
+
+            result.DataBlockAccessed++;
+        }
+        sw.Stop();
+        result.Ticks = sw.ElapsedTicks;
+        return result;
+    }
     public IEnumerable<DataBlock> GetDataBlocks()
     {
         foreach (var block in Blocks)

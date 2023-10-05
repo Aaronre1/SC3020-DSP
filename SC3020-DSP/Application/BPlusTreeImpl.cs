@@ -17,7 +17,7 @@ public class BPlusTreeImpl : IBPlusTree
     {
         _database = database;
     }
-    
+
     public int N { get; private set; }
     public int Levels { get; private set; }
     public NodeBlock Root => _root;
@@ -52,7 +52,7 @@ public class BPlusTreeImpl : IBPlusTree
         var sw = new Stopwatch();
         sw.Start();
         var result = new FindResultModel();
-        
+
         NodeBlock cur = _root;
         result.IndexNodeAccessed++;
         while (cur.NodeType == NodeType.InternalNode)
@@ -89,7 +89,6 @@ public class BPlusTreeImpl : IBPlusTree
             throw new Exception($"{key} not found!");
         }
 
-        //var result = new List<Record>();
         var pointer = cur.Pointers[keyIndex];
         var bucketBlock = _database.FindBucketBlock(pointer);
         while (bucketBlock != null)
@@ -112,11 +111,98 @@ public class BPlusTreeImpl : IBPlusTree
                 bucketBlock = null;
             }
         }
-        
+
         sw.Stop();
         result.Ticks = sw.ElapsedTicks;
         return result;
     }
+
+    public FindResultModel Find(decimal? from, decimal to)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+        var result = new FindResultModel();
+
+        NodeBlock cur = _root;
+        result.IndexNodeAccessed++;
+        while (cur.NodeType == NodeType.InternalNode)
+        {
+            for (int i = 0; i < cur.Count; i++)
+            {
+                // found key <= target key
+                if (from < cur.Keys[i])
+                {
+                    cur = _database.FindNodeBlock(cur.Pointers[i]);
+                    result.IndexNodeAccessed++;
+                    break;
+                }
+
+                // found key > target key && last node
+                if (i == cur.Count - 1)
+                {
+                    cur = _database.FindNodeBlock(cur.Pointers[i + 1]);
+                    result.IndexNodeAccessed++;
+                    break;
+                }
+            }
+        }
+
+        int keyIndex = 0;
+        while (keyIndex < _maxKeys && cur.Keys[keyIndex] != null && from > cur.Keys[keyIndex])
+        {
+            keyIndex++;
+        }
+
+        var pointer = cur.Pointers[keyIndex];
+        while (pointer != null)
+        {
+            var bucketBlock = _database.FindBucketBlock(pointer);
+            while (bucketBlock != null)
+            {
+                foreach (var recordPtr in bucketBlock.Pointers)
+                {
+                    var dataBlock = _database.FindDataBlock(recordPtr);
+                    var record = dataBlock.Items[recordPtr.Offset];
+                    result.Records.Add(record);
+                    result.DataBlockAccessed++;
+                }
+
+                if (bucketBlock.OverflowBucket != null)
+                {
+                    bucketBlock = _database.FindBucketBlock(bucketBlock.OverflowBucket);
+                }
+                else
+                {
+                    bucketBlock = null;
+                }
+            }
+
+            // search next pointer or continue next leaf node
+            keyIndex++;
+            // continue next leaf node
+            if (keyIndex == _maxKeys || cur.Pointers[keyIndex] == null)
+            {
+                if (cur.Pointers[_maxKeys] == null)
+                {
+                    break;
+                }
+                cur = _database.FindNodeBlock(cur.Pointers[_maxKeys]);
+                result.IndexNodeAccessed++;
+                keyIndex = 0;
+            }
+            if (to < cur.Keys[keyIndex])
+            {
+                break;
+            }
+
+            pointer = cur.Pointers[keyIndex];
+        }
+
+        sw.Stop();
+        result.Ticks = sw.ElapsedTicks;
+        return result;
+    }
+
 
     public void Add(Record record, Pointer pointer)
     {
@@ -226,6 +312,7 @@ public class BPlusTreeImpl : IBPlusTree
         var newLeaf = _database.AssignNodeBlock();
         newLeaf.NodeType = NodeType.LeafNode;
 
+        var nextPtr = cur.Pointers[_maxKeys];
         int splitIndex = (_maxKeys + 1) / 2;
         for (int i = 0; i < _maxKeys + 1; i++)
         {
@@ -245,7 +332,7 @@ public class BPlusTreeImpl : IBPlusTree
         }
 
         cur.Pointers[_maxKeys] = newLeaf.Address; // link next ptr
-
+        newLeaf.Pointers[_maxKeys] = nextPtr;
         // create new non-leaf root node
         if (cur == _root)
         {
@@ -392,7 +479,7 @@ public class BPlusTreeImpl : IBPlusTree
 
         var cur = _root;
         var parents = new Stack<NodeBlock>();
-        int left=0, right=0;
+        int left = 0, right = 0;
         while (cur.NodeType == NodeType.InternalNode)
         {
             for (int i = 0; i < cur.Count; i++)
@@ -431,7 +518,7 @@ public class BPlusTreeImpl : IBPlusTree
             Console.WriteLine($"Key to remove is not found: {key}");
             return;
         }
-        
+
         //shift keys
         for (int i = keyIndex; i < cur.Count; i++)
         {
@@ -450,6 +537,7 @@ public class BPlusTreeImpl : IBPlusTree
                 // TODO: delete dead tree
                 _root = null;
             }
+
             return;
         }
 
@@ -471,16 +559,17 @@ public class BPlusTreeImpl : IBPlusTree
                     cur.Keys[i] = cur.Keys[i - 1];
                 }
 
-                cur.Pointers[cur.Count+1] = cur.Pointers[cur.Count];
+                cur.Pointers[cur.Count + 1] = cur.Pointers[cur.Count];
                 cur.Pointers[cur.Count] = null;
                 cur.Keys[0] = leftNode.Keys[leftNode.Count - 1];
 
-                leftNode.Pointers[leftNode.Count-1] = cur.Address;
+                leftNode.Pointers[leftNode.Count - 1] = cur.Address;
                 leftNode.Pointers[leftNode.Count] = null;
                 parents.Peek().Keys[left] = cur.Keys[0];
                 return;
             }
         }
+
         // share from right sibling
         if (right <= parents.Peek().Count)
         {
@@ -515,7 +604,7 @@ public class BPlusTreeImpl : IBPlusTree
 
             leftNode.Pointers[leftNode.Count] = null;
             leftNode.Pointers[leftNode.Count] = cur.Pointers[cur.Count];
-            
+
             //TODO: RemoveInternal()
             //TODO: Delete cur
         }
@@ -588,9 +677,7 @@ public class BPlusTreeImpl : IBPlusTree
         {
             return;
         }
-        
+
         // TODO: Parent stack 
     }
-    
-    
 }

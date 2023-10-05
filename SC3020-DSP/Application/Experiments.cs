@@ -60,7 +60,7 @@ public class Experiments
         Console.WriteLine($"Parameter N: "); // TODO: Set parameter N
         Console.WriteLine($"Number of nodes: {_database.GetNodeBlocks().Count()}");
         Console.WriteLine($"Number of levels: {_bPlusTree.Levels}");
-        Console.WriteLine($"Root node: {string.Join(", ", _bPlusTree.Root.Keys)}");
+        Console.WriteLine($"Root node: {string.Join(", ", _bPlusTree.Root.Keys.Where(i=>i != null))}");
         Console.WriteLine("===================================================================\n");
     }
 
@@ -75,9 +75,31 @@ public class Experiments
         Console.WriteLine($"Number of data blocks accessed: {result.DataBlockAccessed}");
         Console.WriteLine($"Average 'FG3_PCT_home': {result.Records.Average(x => x.Fg3PctHome)}");
         Console.WriteLine($"Ticks elapsed: {result.Ticks}");
-        Console.WriteLine("\n-------------------------------------------------------------------\n");
-        Console.WriteLine($"+++ Brute Force +++");
+        Console.WriteLine("-------------------------------------------------------------------");
+        Console.WriteLine("+++ Brute Force +++");
         Console.WriteLine($"Number of data blocks accessed: {linearResult.DataBlockAccessed}");
+        Console.WriteLine($"Average 'FG3_PCT_home': {linearResult.Records.Average(x => x.Fg3PctHome)}");
+        Console.WriteLine($"Ticks elapsed: {linearResult.Ticks}");
+        Console.WriteLine("===================================================================\n");
+    }
+    
+    // Experiment 4
+    public void FindRecords(decimal from, decimal to)
+    {
+        var result = _bPlusTree.Find(from, to);
+        var linearResult = _database.FindRecords(from, to);
+        Console.WriteLine("=========================== Experiment 4 ==========================");
+        Console.WriteLine("+++ B Plus Tree +++");
+        Console.WriteLine($"Number of index nodes accessed: {result.IndexNodeAccessed}");
+        Console.WriteLine($"Number of data blocks accessed: {result.DataBlockAccessed}");
+        Console.WriteLine($"Number of records found: {result.Records.Count}");
+        Console.WriteLine($"Average 'FG3_PCT_home': {result.Records.Average(x => x.Fg3PctHome)}");
+        Console.WriteLine($"Ticks elapsed: {result.Ticks}");
+        Console.WriteLine("-------------------------------------------------------------------");
+        Console.WriteLine("+++ Brute Force +++");
+        Console.WriteLine($"Number of data blocks accessed: {linearResult.DataBlockAccessed}");
+        Console.WriteLine($"Number of records found: {linearResult.Records.Count}");
+        Console.WriteLine($"Average 'FG3_PCT_home': {linearResult.Records.Average(x => x.Fg3PctHome)}");
         Console.WriteLine($"Ticks elapsed: {linearResult.Ticks}");
         Console.WriteLine("===================================================================\n");
     }

@@ -26,6 +26,9 @@ while (true)
             case 3:
                 Console.WriteLine("3. Experiment 3 - Retrieve 'FG_PCT_home' == 0.5");
                 break;
+            case 4:
+                Console.WriteLine("4. Experiment 4 - Retrieve 'FG_PCT_home' BETWEEN 0.6 to 1 (inclusive)");
+                break;
             case 6:
                 Console.WriteLine("6. Exit");
                 break;
@@ -54,6 +57,9 @@ while (true)
                 break;
             case 3:
                 experiment.FindRecords(0.5M);
+                break;
+            case 4:
+                experiment.FindRecords(0.6M, 1M);
                 break;
             case 6:
                 return;
