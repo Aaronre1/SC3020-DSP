@@ -57,7 +57,7 @@ public class Experiments
         }
 
         Console.WriteLine("=========================== Experiment 2 ==========================");
-        Console.WriteLine($"Parameter N: "); // TODO: Set parameter N
+        Console.WriteLine($"Parameter N: {_database.NodeBlockCapacity()}"); // TODO: Set parameter N
         Console.WriteLine($"Number of nodes: {_database.GetNodeBlocks().Count()}");
         Console.WriteLine($"Number of levels: {_bPlusTree.Levels}");
         Console.WriteLine($"Root node: {string.Join(", ", _bPlusTree.Root.Keys.Where(i=>i != null))}");

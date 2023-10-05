@@ -19,16 +19,19 @@ public class Database
         _options = options;
         _capacity = (int)(options.DiskCapacityInBytes / options.BlockSizeInBytes);
         Blocks = new List<BaseBlock>(_capacity);
-      Console.WriteLine($"Initialized database with {_capacity} blocks capacity.");
+        Console.WriteLine($"Initialized database with {_capacity} blocks capacity.");
 
-       // _nodeBlockCapacity = (int)(options.BlockSizeInBytes / Node.ByteSize);
-       _nodeBlockCapacity = 10;
-      //  Console.WriteLine(_nodeBlockCapacity);
+        // nodeBlockCapacity = 400 - (pointer size) / (pointer size + key size)
+        _nodeBlockCapacity =
+            (int)((options.BlockSizeInBytes - options.PointerSizeInBytes) /
+                  (options.PointerSizeInBytes + sizeof(decimal)));
         _dataBlockCapacity = (int)(options.BlockSizeInBytes / options.RecordSizeInBytes);
     }
 
     public int GetDataBlockCapacity() => _dataBlockCapacity;
-    
+    public int NodeBlockCapacity() => _nodeBlockCapacity;
+    public DatabaseOptions Options => _options;
+
     public bool Add(Record record)
     {
         foreach (var block in GetDataBlocks())
@@ -68,9 +71,10 @@ public class Database
                 return;
             }
         }
+
         bucket.Pointers.Add(recordPtr);
     }
-    
+
     public NodeBlock AssignNodeBlock()
     {
         if (Blocks.Count == _capacity)
@@ -105,7 +109,7 @@ public class Database
     {
         return (BucketBlock)Blocks[pointer.BlockId];
     }
-    
+
     public DataBlock FindDataBlock(Pointer pointer)
     {
         return (DataBlock)Blocks[pointer.BlockId];
@@ -128,6 +132,7 @@ public class Database
 
             result.DataBlockAccessed++;
         }
+
         sw.Stop();
         result.Ticks = sw.ElapsedTicks;
         return result;
@@ -150,10 +155,12 @@ public class Database
 
             result.DataBlockAccessed++;
         }
+
         sw.Stop();
         result.Ticks = sw.ElapsedTicks;
         return result;
     }
+
     public IEnumerable<DataBlock> GetDataBlocks()
     {
         foreach (var block in Blocks)
@@ -162,6 +169,7 @@ public class Database
             {
                 continue;
             }
+
             yield return (DataBlock)block;
         }
     }
@@ -201,5 +209,4 @@ public class Database
 
         return result;
     }
-    
 }

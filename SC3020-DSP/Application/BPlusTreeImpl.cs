@@ -8,17 +8,16 @@ namespace SC3020_DSP.Application;
 
 public class BPlusTreeImpl : IBPlusTree
 {
-    private Database _database;
-    private NodeBlock _root;
-
-    private int _maxKeys = 5;
+    private readonly Database _database;
+    private readonly int _maxKeys;
+    private NodeBlock _root = null!;
 
     public BPlusTreeImpl(Database database)
     {
         _database = database;
+        _maxKeys = _database.NodeBlockCapacity();
     }
 
-    public int N { get; private set; }
     public int Levels { get; private set; }
     public NodeBlock Root => _root;
 
@@ -256,7 +255,7 @@ public class BPlusTreeImpl : IBPlusTree
 
         // find slot index to insert key
         int keyIndex = 0;
-        while (keyIndex < _maxKeys && cur.Keys[keyIndex] != null && record.Key > cur.Keys[keyIndex])
+        while (keyIndex < _maxKeys-1 && cur.Keys[keyIndex] != null && record.Key > cur.Keys[keyIndex])
         {
             keyIndex++;
         }
@@ -325,7 +324,10 @@ public class BPlusTreeImpl : IBPlusTree
             }
 
             // insert right node
-            cur.Keys[i] = null;
+            if (i < _maxKeys)
+            {
+                cur.Keys[i] = null;
+            }
             cur.Pointers[i] = null;
             newLeaf.Keys[i - splitIndex] = tempKeys[i];
             newLeaf.Pointers[i - splitIndex] = tempPtrs[i];
@@ -442,10 +444,14 @@ public class BPlusTreeImpl : IBPlusTree
                 cur.Pointers[i + 1] = null;
                 continue;
             }
-
+            
             // insert right node
-            cur.Keys[i] = null;
-            cur.Pointers[i + 1] = null;
+            if (i < _maxKeys)
+            {
+                cur.Keys[i] = null;
+                cur.Pointers[i + 1] = null;
+            }
+            
             newInternal.Keys[i - splitIndex - 1] = tempKeys[i];
             newInternal.Pointers[i - splitIndex] = tempPtrs[i + 1];
         }
