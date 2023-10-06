@@ -201,8 +201,7 @@ public class BPlusTreeImpl : IBPlusTree
         result.Ticks = sw.ElapsedTicks;
         return result;
     }
-
-
+    
     public void Add(Record record, Pointer pointer)
     {
         if (record.Key == null)

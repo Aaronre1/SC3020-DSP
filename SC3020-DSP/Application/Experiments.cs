@@ -38,6 +38,9 @@ public class Experiments
         Console.WriteLine($"Max number of records per block: {_database.GetDataBlockCapacity()}");
         Console.WriteLine($"Number of blocks for storing the data: {_database.GetDataBlocks().Count()}");
         Console.WriteLine("===================================================================\n");
+
+        var uniqueKeys = records.DistinctBy(x => x.Key).Count();
+        Console.WriteLine(uniqueKeys);
     }
 
     // Experiment 2
