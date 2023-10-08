@@ -10,22 +10,24 @@ public class Database
 {
     private readonly int _dataBlockCapacity;
     private readonly int _nodeBlockCapacity;
+    private readonly int _bucketBlockCapacity;
     private readonly int _capacity;
     private readonly DatabaseOptions _options;
-    private List<BaseBlock> Blocks;
+    public List<BaseBlock> Blocks { get; }
 
     public Database(DatabaseOptions options)
     {
         _options = options;
         _capacity = (int)(options.DiskCapacityInBytes / options.BlockSizeInBytes);
         Blocks = new List<BaseBlock>(_capacity);
-        Console.WriteLine($"Initialized database with {_capacity} blocks capacity.");
-
+       // Console.WriteLine($"Initialized database with {_capacity} blocks capacity.");
+        
+        _dataBlockCapacity = (int)(options.BlockSizeInBytes / options.RecordSizeInBytes);
         // nodeBlockCapacity = 400 - (pointer size) / (pointer size + key size)
         _nodeBlockCapacity =
             (int)((options.BlockSizeInBytes - options.PointerSizeInBytes) /
                   (options.PointerSizeInBytes + sizeof(decimal)));
-        _dataBlockCapacity = (int)(options.BlockSizeInBytes / options.RecordSizeInBytes);
+        _bucketBlockCapacity = (int)(options.BlockSizeInBytes / options.PointerSizeInBytes);
     }
 
     public int GetDataBlockCapacity() => _dataBlockCapacity;
@@ -91,10 +93,10 @@ public class Database
     {
         if (Blocks.Count == _capacity)
         {
-            throw new Exception("Database is full"); //TODO: Extract method
+            throw new Exception("Database is full");
         }
 
-        var block = new BucketBlock(Blocks.Count, _nodeBlockCapacity); //TODO: Bucket capacity
+        var block = new BucketBlock(Blocks.Count, _bucketBlockCapacity);
         Blocks.Add(block);
         return block;
     }
@@ -187,26 +189,31 @@ public class Database
         }
     }
 
-    public long BytesUsed()
+    public RemoveResultModel RemoveRecordsTill(decimal to)
     {
-        long result = 0;
-
+        var result = new RemoveResultModel();
+        var sw = new Stopwatch();
+        sw.Start();
         foreach (var block in Blocks)
         {
-            if (block.GetType() == typeof(DataBlock))
+            result.DataBlockAccessed++;
+            if (block.GetType() != typeof(DataBlock))
             {
-                var dataBytes = block.Count * _options.RecordSizeInBytes;
-                result += dataBytes;
+                continue;
             }
 
-            // if (block.GetType() == typeof(NodeBlock))
-            // {
-            //     var blockBytes = block.Count * Node.ByteSize;
-            //     blockBytes += Pointer.ByteSize;
-            //     result += blockBytes;
-            // }
+            var dataBlock = (DataBlock)block;
+            foreach (var record in dataBlock.Items)
+            {
+                if (record.Key <= to)
+                {
+                    record.Deleted = true;
+                    result.RecordsRemoved++;
+                }
+            }
         }
-
+        sw.Stop();
+        result.Ticks = sw.ElapsedTicks;
         return result;
     }
 }

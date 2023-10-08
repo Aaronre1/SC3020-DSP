@@ -1,4 +1,6 @@
-﻿using SC3020_DSP.Domain;
+using System.Diagnostics;
+using SC3020_DSP.Application.Models;
+using SC3020_DSP.Domain;
 using SC3020_DSP.Domain.Domain.Enums;
 using SC3020_DSP.Domain.Entities;
 
@@ -6,225 +8,532 @@ namespace SC3020_DSP.Application;
 
 public class BPlusTree
 {
-    private Database _database;
-    private NodeBlock _root;
-    private NodeBlock _cur;
-    private NodeBlock _parent;
+    private readonly Database _database;
+    private readonly int _maxKeys;
+    private NodeBlock _root = null!;
 
     public BPlusTree(Database database)
     {
-        _root = database.AssignNodeBlock();
-        _root.NodeType = NodeType.LeafNode;
+        _database = database;
+        _maxKeys = _database.NodeBlockCapacity();
+        
     }
 
-    public void Insert(Record record, Pointer address)
-    {
-        NodeBlock cur = _root;
-        NodeBlock parent;
+    public int Levels { get; private set; }
+    public NodeBlock Root => _root;
 
-        //
+    public void Print()
+    {
+        Print(_root);
+    }
+
+    private void Print(NodeBlock cur)
+    {
+        if (cur != null)
+        {
+            for (int i = 0; i < cur.Count; i++)
+            {
+                Console.Write($" {cur.Keys[i]} ");
+            }
+
+            Console.WriteLine();
+            if (cur.NodeType == NodeType.InternalNode)
+            {
+                for (int i = 0; i < cur.Count + 1; i++)
+                {
+                    Print(_database.FindNodeBlock(cur.Pointers[i]));
+                }
+            }
+        }
+    }
+
+    public FindResultModel Find(decimal? key)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+        var result = new FindResultModel();
+
+        NodeBlock cur = _root;
+        result.IndexNodeAccessed++;
         while (cur.NodeType == NodeType.InternalNode)
         {
-            parent = cur;
             for (int i = 0; i < cur.Count; i++)
             {
-                if (record.Key < cur.Keys[i])
+                // found key <= target key
+                if (key < cur.Keys[i])
                 {
-                    cur = cur.Items[i];
+                    cur = _database.FindNodeBlock(cur.Pointers[i]);
+                    result.IndexNodeAccessed++;
                     break;
                 }
 
+                // found key > target key && last node
                 if (i == cur.Count - 1)
                 {
-                    cur = cur.Items[i + 1];
+                    cur = _database.FindNodeBlock(cur.Pointers[i + 1]);
+                    result.IndexNodeAccessed++;
                     break;
                 }
             }
         }
 
-        if (cur.Count < cur.Capacity)
+        int keyIndex = 0;
+        while (keyIndex < _maxKeys && cur.Keys[keyIndex] != null && key > cur.Keys[keyIndex])
         {
-            int i = 0;
-            while (record.Key > cur.Keys[i] && i < cur.Count)
-            {
-                i++;
-            }
-
-            for (int j = cur.Count; j > i; j--)
-            {
-                cur.Keys[j] = cur.Keys[j - 1];
-            }
-
-            cur.Keys[i] = (decimal)record.Key;
-            cur.Items[cur.Count] = cur.Items[cur.Count - 1];
-            cur.Items[cur.Count - 1] = null;
+            keyIndex++;
         }
-        else
+
+        if (cur.Keys[keyIndex] != key)
         {
-            // doing banana split
-            var newLeaf = _database.AssignNodeBlock();
-            newLeaf.NodeType = NodeType.LeafNode;
-            // virtual node???
-            var virtualNode = new decimal?[cur.Capacity + 1];
-            for (int i = 0; i < newLeaf.Capacity; i++)
+            Console.WriteLine(string.Join("|", cur.Keys));
+            throw new Exception($"{key} not found!");
+        }
+
+        var pointer = cur.Pointers[keyIndex];
+        var bucketBlock = _database.FindBucketBlock(pointer);
+        while (bucketBlock != null)
+        {
+            result.BucketBlockAccessed++;
+            foreach (var recordPtr in bucketBlock.Pointers)
             {
-                virtualNode[i] = cur.Keys[i];
-            }
-            // slot to insert in virtual node
-            int ii = 0;
-            while (record.Key > virtualNode[ii] && ii < cur.Capacity)
-            {
-                ii++;
-            }
-            // right shift 
-            for (int j = cur.Capacity + 1; j > ii; j--)
-            {
-                virtualNode[j] = virtualNode[j - 1];
+                var dataBlock = _database.FindDataBlock(recordPtr);
+                var record = dataBlock.Items[recordPtr.Offset];
+                result.Records.Add(record);
+                result.DataBlockAccessed++;
             }
 
-            virtualNode[ii] = record.Key;
-            cur.Items[cur.Count] = newLeaf;
-            newLeaf.Items[newLeaf.Count] = cur.Items[cur.Capacity]; // ???
-            cur.Items[cur.Capacity] = null; // ????
+            if (bucketBlock.OverflowBucket != null)
+            {
+                bucketBlock = _database.FindBucketBlock(bucketBlock.OverflowBucket);
+            }
+            else
+            {
+                bucketBlock = null;
+            }
+        }
 
+        sw.Stop();
+        result.Ticks = sw.ElapsedTicks;
+        return result;
+    }
+
+    public FindResultModel Find(decimal? from, decimal to)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+        var result = new FindResultModel();
+
+        NodeBlock cur = _root;
+        result.IndexNodeAccessed++;
+        while (cur.NodeType == NodeType.InternalNode)
+        {
             for (int i = 0; i < cur.Count; i++)
             {
-                cur.Keys[i] = (decimal)virtualNode[i];
-            }
-
-            for (int i = 0, j = cur.Count; i < newLeaf.Count; i++, j++)
-            {
-                newLeaf.Keys[i] = (decimal)virtualNode[j];
-            }
-
-            if (cur == _root)
-            {
-                var newRoot = new NodeBlock();
-                newRoot.NodeType = NodeType.InternalNode;
-                newRoot.Keys[0] = newLeaf.Keys[0];
-                newRoot.Items[0] = cur;
-                newRoot.Items[1] = newLeaf;
-                _root = newRoot;
-            }
-            else
-            {
-                // InsertInternal(newLeaf.Keys[0], parent, newLeaf);
-            }
-        }
-    }
-
-    private void InsertInternal(decimal? key, NodeBlock cur, NodeBlock child)
-    {
-        if (cur.Count < cur.Capacity)
-        {
-            int i = 0;
-            while (key > cur.Keys[i] && i < cur.Count)
-            {
-                i++;
-            }
-
-            for (int j = cur.Count; j > i; j--)
-            {
-                cur.Keys[j] = cur.Keys[j - 1];
-            }
-
-            for (int j = cur.Count + 1; j > i + 1; j--)
-            {
-                cur.Items[j] = cur.Items[j - 1];
-            }
-
-            cur.Keys[i] = (decimal)key;
-            cur.Items[i + 1] = child;
-        }
-        else
-        {
-            var newInternal = new NodeBlock();
-            newInternal.NodeType = NodeType.InternalNode;
-            var virtualKey = new decimal?[cur.Capacity + 1];
-            for (int i = 0; i < cur.Capacity; i++)
-            {
-                virtualKey[i] = cur.Keys[i];
-            }
-
-            var virtualItems = new NodeBlock[cur.Capacity + 2];
-            for (int i = 0; i < cur.Capacity; i++)
-            {
-                virtualItems[i] = cur.Items[i];
-            }
-
-            // find index slot
-            int keyIndex = 0;
-            while (key > virtualKey[keyIndex] && keyIndex < cur.Capacity)
-            {
-                keyIndex++;
-            }
-
-            // right shift till index slot (keys)
-            for (int j = cur.Capacity + 1; j > keyIndex; j--)
-            {
-                virtualKey[j] = virtualKey[j - 1];
-            }
-            virtualKey[keyIndex] = key; // insert key
-            
-            // right shift till index slot (ptrs)
-            for (int j = cur.Capacity + 2; j > keyIndex + 1; j--)
-            {
-                virtualItems[j] = virtualItems[j - 1];
-            }
-            virtualItems[keyIndex + 1] = child; // insert ptr
-            
-            // 
-            for (int i = 0, j = cur.Count + 1; i < newInternal.Count; i++, j++)
-            {
-                newInternal.Keys[i] = (decimal)virtualKey[j];
-            }
-
-            for (int i = 0, j = cur.Count + 1; i < newInternal.Count + 1; i++, j++)
-            {
-                newInternal.Items[i] = virtualItems[j];
-            }
-
-            if (cur == _root)
-            {
-                var newRoot = new NodeBlock();
-                newRoot.Keys[0] = cur.Keys[cur.Count];
-                newRoot.Items[0] = cur;
-                newRoot.Items[1] = newInternal;
-                newRoot.NodeType = NodeType.InternalNode;
-            }
-            else
-            {
-                InsertInternal(cur.Keys[cur.Count],FindParent(_root, child), newInternal);
-            }
-        }
-    }
-
-    private NodeBlock FindParent(NodeBlock cur, NodeBlock child)
-    {
-        NodeBlock parent = null;
-        if (cur.NodeType == NodeType.LeafNode
-            || cur.Items[0].NodeType == NodeType.LeafNode)
-        {
-            return null;
-        }
-
-        for (int i = 0; i < cur.Count + 1; i++)
-        {
-            if (cur.Items[i] == child)
-            {
-                parent = cur;
-                return parent;
-            }
-            else
-            {
-                parent = FindParent(cur.Items[i], child);
-                if (parent != null)
+                // found key <= target key
+                if (from < cur.Keys[i])
                 {
-                    return parent;
+                    cur = _database.FindNodeBlock(cur.Pointers[i]);
+                    result.IndexNodeAccessed++;
+                    break;
+                }
+
+                // found key > target key && last node
+                if (i == cur.Count - 1)
+                {
+                    cur = _database.FindNodeBlock(cur.Pointers[i + 1]);
+                    result.IndexNodeAccessed++;
+                    break;
                 }
             }
         }
 
-        return parent;
+        int keyIndex = 0;
+        while (keyIndex < _maxKeys && cur.Keys[keyIndex] != null && from > cur.Keys[keyIndex])
+        {
+            keyIndex++;
+        }
+
+        var pointer = cur.Pointers[keyIndex];
+        while (pointer != null)
+        {
+            var bucketBlock = _database.FindBucketBlock(pointer);
+            while (bucketBlock != null)
+            {
+                result.BucketBlockAccessed++;
+                foreach (var recordPtr in bucketBlock.Pointers)
+                {
+                    var dataBlock = _database.FindDataBlock(recordPtr);
+                    var record = dataBlock.Items[recordPtr.Offset];
+                    result.Records.Add(record);
+                    result.DataBlockAccessed++;
+                }
+
+                if (bucketBlock.OverflowBucket != null)
+                {
+                    bucketBlock = _database.FindBucketBlock(bucketBlock.OverflowBucket);
+                }
+                else
+                {
+                    bucketBlock = null;
+                }
+            }
+
+            // search next pointer or continue next leaf node
+            keyIndex++;
+            // continue next leaf node
+            if (keyIndex == _maxKeys || cur.Pointers[keyIndex] == null)
+            {
+                if (cur.Pointers[_maxKeys] == null)
+                {
+                    break;
+                }
+                cur = _database.FindNodeBlock(cur.Pointers[_maxKeys]);
+                result.IndexNodeAccessed++;
+                keyIndex = 0;
+            }
+            if (to < cur.Keys[keyIndex])
+            {
+                break;
+            }
+
+            pointer = cur.Pointers[keyIndex];
+        }
+
+        sw.Stop();
+        result.Ticks = sw.ElapsedTicks;
+        return result;
+    }
+    
+    public void Add(Record record, Pointer pointer)
+    {
+        if (record.Key == null)
+        {
+            return;
+        }
+
+        if (_root == null)
+        {
+            _root = _database.AssignNodeBlock();
+            _root.NodeType = NodeType.LeafNode;
+            _root.Keys[0] = (decimal)record.Key;
+            // Insert to bucket
+            var rootBucket = _database.AssignBucketBlock();
+            rootBucket.Pointers.Add(pointer);
+            _root.Pointers[0] = rootBucket.Address;
+            Levels++;
+            return;
+        }
+
+        NodeBlock cur = _root;
+        Stack<NodeBlock> parents = new Stack<NodeBlock>();
+        // find leaf node to insert
+        while (cur.NodeType == NodeType.InternalNode)
+        {
+            parents.Push(cur);
+            for (int i = 0; i < cur.Count; i++)
+            {
+                // found key < target key
+                if (record.Key < cur.Keys[i])
+                {
+                    cur = _database.FindNodeBlock(cur.Pointers[i]);
+                    break;
+                }
+
+                if (record.Key == cur.Keys[i])
+                {
+                    cur = _database.FindNodeBlock(cur.Pointers[i + 1]);
+                    break;
+                }
+
+                // found key > target key && last node
+                if (i == cur.Count - 1)
+                {
+                    cur = _database.FindNodeBlock(cur.Pointers[i + 1]);
+                    break;
+                }
+            }
+        }
+
+        // find slot index to insert key
+        int keyIndex = 0;
+        while (keyIndex < _maxKeys-1 && cur.Keys[keyIndex] != null && record.Key > cur.Keys[keyIndex])
+        {
+            keyIndex++;
+        }
+
+        // target key already exists
+        if (record.Key == cur.Keys[keyIndex])
+        {
+            // insert to bucket
+            _database.AddToBucket(pointer, cur.Pointers[keyIndex]);
+            return;
+        }
+
+        var bucket = _database.AssignBucketBlock();
+        bucket.Pointers.Add(pointer);
+        // leaf node has slot
+        if (cur.Count < _maxKeys)
+        {
+            // right shift keys to make space
+            for (int i = cur.Count; i > keyIndex; i--)
+            {
+                cur.Keys[i] = cur.Keys[i - 1];
+                cur.Pointers[i] = cur.Pointers[i - 1];
+            }
+
+            cur.Keys[keyIndex] = (decimal)record.Key;
+            // insert to bucket
+            cur.Pointers[keyIndex] = bucket.Address;
+            return;
+        }
+
+        // leaf is full
+        // create temp node
+        var tempKeys = new decimal?[_maxKeys + 1];
+        var tempPtrs = new Pointer[_maxKeys + 1];
+        for (int i = 0; i < _maxKeys; i++)
+        {
+            tempKeys[i] = cur.Keys[i];
+            tempPtrs[i] = cur.Pointers[i];
+        }
+
+        // right shift keys
+        for (int i = _maxKeys; i > keyIndex; i--)
+        {
+            tempKeys[i] = tempKeys[i - 1];
+            tempPtrs[i] = tempPtrs[i - 1];
+        }
+
+        tempKeys[keyIndex] = record.Key;
+        // insert bucket
+        tempPtrs[keyIndex] = bucket.Address;
+
+        //insert into new leaf floor(n+1/2)
+        var newLeaf = _database.AssignNodeBlock();
+        newLeaf.NodeType = NodeType.LeafNode;
+
+        var nextPtr = cur.Pointers[_maxKeys];
+        int splitIndex = (_maxKeys + 1) / 2;
+        for (int i = 0; i < _maxKeys + 1; i++)
+        {
+            // insert left node
+            if (i < splitIndex)
+            {
+                cur.Keys[i] = tempKeys[i];
+                cur.Pointers[i] = tempPtrs[i];
+                continue;
+            }
+
+            // insert right node
+            if (i < _maxKeys)
+            {
+                cur.Keys[i] = null;
+            }
+            cur.Pointers[i] = null;
+            newLeaf.Keys[i - splitIndex] = tempKeys[i];
+            newLeaf.Pointers[i - splitIndex] = tempPtrs[i];
+        }
+
+        cur.Pointers[_maxKeys] = newLeaf.Address; // link next ptr
+        newLeaf.Pointers[_maxKeys] = nextPtr;
+        // create new non-leaf root node
+        if (cur == _root)
+        {
+            var newRoot = _database.AssignNodeBlock();
+            newRoot.NodeType = NodeType.InternalNode;
+            newRoot.Keys[0] = newLeaf.Keys[0];
+            newRoot.Pointers[0] = cur.Address;
+            newRoot.Pointers[1] = newLeaf.Address;
+            _root = newRoot;
+            Levels++;
+            return;
+        }
+
+        // push key up to parent
+        var newChild = newLeaf;
+        var newKey = newLeaf.Keys[0];
+
+        while (parents.Any())
+        {
+            var parent = parents.Pop();
+            var result = InsertInternal(newKey, parent, newChild);
+            if (result.Item1 == null)
+            {
+                return;
+            }
+
+            newKey = result.Item1;
+            newChild = result.Item2;
+        }
+    }
+
+    private (decimal?, NodeBlock?) InsertInternal(decimal? key, NodeBlock cur, NodeBlock child)
+    {
+        var childPtr = new Pointer(child.Id);
+        // Find slot to insert key
+        int keyIndex = 0;
+        while (keyIndex < _maxKeys && cur.Keys[keyIndex] != null && key > cur.Keys[keyIndex])
+        {
+            keyIndex++;
+        }
+
+        // key already exists
+        if (key == cur.Keys[keyIndex])
+        {
+            return (null, null);
+        }
+
+        // internal node has slot
+        if (cur.Count < _maxKeys)
+        {
+            // right shift keys to make space
+            for (int i = cur.Count; i > keyIndex; i--)
+            {
+                cur.Keys[i] = cur.Keys[i - 1];
+                cur.Pointers[i + 1] = cur.Pointers[i];
+            }
+
+            cur.Keys[keyIndex] = (decimal)key;
+            cur.Pointers[keyIndex + 1] = childPtr;
+            return (null, null);
+        }
+
+        // internal node is full, split node and push up middle key
+        var tempKeys = new decimal?[_maxKeys + 1];
+        var tempPtrs = new Pointer[_maxKeys + 2];
+        for (int i = 0; i < _maxKeys; i++)
+        {
+            tempKeys[i] = cur.Keys[i];
+            tempPtrs[i] = cur.Pointers[i];
+        }
+
+        tempPtrs[_maxKeys] = cur.Pointers[_maxKeys];
+
+        // right shift till index slot
+        for (int i = _maxKeys; i > keyIndex; i--)
+        {
+            tempKeys[i] = tempKeys[i - 1];
+            tempPtrs[i + 1] = tempPtrs[i];
+        }
+
+        // insert into temp node
+        tempKeys[keyIndex] = key;
+        tempPtrs[keyIndex + 1] = childPtr;
+
+        // insert into new internal node floor (n+1/2)
+        var newInternal = _database.AssignNodeBlock();
+        newInternal.NodeType = NodeType.InternalNode;
+
+        int splitIndex = (_maxKeys + 1) / 2;
+        decimal? splitKey = tempKeys[splitIndex];
+        cur.Pointers[0] = tempPtrs[0];
+        for (int i = 0; i < _maxKeys + 1; i++)
+        {
+            // insert left node
+            if (i < splitIndex)
+            {
+                cur.Keys[i] = tempKeys[i];
+                cur.Pointers[i + 1] = tempPtrs[i + 1];
+                continue;
+            }
+
+            // key to push up
+            if (i == splitIndex)
+            {
+                newInternal.Pointers[0] = tempPtrs[splitIndex + 1];
+                cur.Keys[i] = null;
+                cur.Pointers[i + 1] = null;
+                continue;
+            }
+            
+            // insert right node
+            if (i < _maxKeys)
+            {
+                cur.Keys[i] = null;
+                cur.Pointers[i + 1] = null;
+            }
+            
+            newInternal.Keys[i - splitIndex - 1] = tempKeys[i];
+            newInternal.Pointers[i - splitIndex] = tempPtrs[i + 1];
+        }
+
+        if (cur == _root)
+        {
+            var newRoot = _database.AssignNodeBlock();
+            newRoot.NodeType = NodeType.InternalNode;
+            newRoot.Keys[0] = splitKey;
+            newRoot.Pointers[0] = new Pointer(cur.Id);
+            newRoot.Pointers[1] = new Pointer(newInternal.Id);
+            _root = newRoot;
+            Levels++;
+            return (null, null);
+        }
+
+        return (splitKey, newInternal);
+    }
+    
+    public RemoveResultModel RemoveRecordsTill(decimal to)
+    {
+        var cur = _root;
+        var result = new RemoveResultModel();
+        var sw = new Stopwatch();
+        sw.Start();
+        
+        result.IndexNodeAccessed++;
+        while (cur.NodeType == NodeType.InternalNode)
+        {
+            cur = _database.FindNodeBlock(cur.Pointers[0]);
+            result.IndexNodeAccessed++;
+        }
+
+        while (cur != null)
+        {
+            for (var i = 0; i < cur.Count; i++)
+            {
+                if (cur.Keys[i] <= to)
+                {
+                    // delete records in bucket
+                    var bucket = _database.FindBucketBlock(cur.Pointers[i]);
+                    while (bucket != null)
+                    {
+                        foreach (var pointer in bucket.Pointers)
+                        {
+                            var dataBlock = _database.FindDataBlock(pointer);
+                            dataBlock.Items[pointer.Offset].Deleted = true;
+                            result.RecordsRemoved++;
+                        }
+
+                        if (bucket.OverflowBucket != null)
+                        {
+                            bucket = _database.FindBucketBlock(bucket.OverflowBucket);
+                        }
+                        else
+                        {
+                            bucket = null;
+                        }
+                    }
+                }
+                else
+                {
+                    sw.Stop();
+                    result.Ticks = sw.ElapsedTicks;
+                    return result;
+                }
+            }
+
+            if (cur.Pointers[_maxKeys] != null)
+            {
+                cur = _database.FindNodeBlock(cur.Pointers[_maxKeys]);
+                result.IndexNodeAccessed++;
+            }
+            else
+            {
+                cur = null;
+            }
+        }
+
+        sw.Stop();
+        result.Ticks = sw.ElapsedTicks;
+        return result;
     }
 }

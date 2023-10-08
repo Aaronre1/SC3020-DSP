@@ -6,7 +6,10 @@ var choices = new[] { 1, 6 };
 
 while (true)
 {
+    Console.WriteLine("=========================================================================");
     Console.WriteLine("=========================== SC3020 - Project 1 ==========================");
+    Console.WriteLine("=========================================================================");
+
     foreach (var c in choices)
     {
         switch (c)
@@ -22,6 +25,9 @@ while (true)
                 break;
             case 4:
                 Console.WriteLine("4. Experiment 4 - Retrieve 'FG_PCT_home' BETWEEN 0.6 to 1 (inclusive)");
+                break;
+            case 5:
+                Console.WriteLine("5. Experiment 5 - Delete 'FG_PCT_home <= 0.35 (inclusive)");
                 break;
             case 6:
                 Console.WriteLine("6. Exit");
@@ -54,6 +60,10 @@ while (true)
                 break;
             case 4:
                 experiment.FindRecords(0.6M, 1M);
+                break;
+            case 5:
+                experiment.Experiment5(0.35M);
+                choices = new[] { 2, 6 };
                 break;
             case 6:
                 return;

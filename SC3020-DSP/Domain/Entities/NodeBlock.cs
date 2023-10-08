@@ -15,6 +15,8 @@ public class NodeBlock : BaseBlock
 
     public Pointer[] Pointers { get; }
     
+    public bool Deleted { get; set; }
+    
     public NodeBlock(int id, int capacity)
     {
         Id = id;

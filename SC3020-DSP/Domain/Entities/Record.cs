@@ -21,6 +21,7 @@ public class Record
 
     public bool HomeTeamWins { get; set; } // 1
 
+    public bool Deleted { get; set; } // 1
     public override string ToString()
     {
         return $"{GameDate} {TeamId} {PtsHome} ...";

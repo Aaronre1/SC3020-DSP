@@ -6,6 +6,7 @@ public class FindResultModel
 {
     public int IndexNodeAccessed { get; set; }
     public int DataBlockAccessed { get; set; }
+    public int BucketBlockAccessed { get; set; }
     public List<Record> Records { get; set; } = new List<Record>();
     public long Ticks { get; set; }
 }
