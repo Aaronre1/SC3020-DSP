@@ -43,8 +43,11 @@ public class Experiments
             var offset = 0;
             foreach (var record in block.Items)
             {
-                var pointer = new Pointer(blockId, offset);
-                _bPlusTree.Add(record, pointer);
+                if (!record.Deleted)
+                {
+                    var pointer = new Pointer(blockId, offset);
+                    _bPlusTree.Add(record, pointer);
+                }
                 offset++;
             }
         }
@@ -146,8 +149,8 @@ public class Experiments
         Console.WriteLine($"Number of levels: {_bPlusTree.Levels}");
         Console.WriteLine($"Root node: {string.Join(", ", _bPlusTree.Root.Keys.Where(i => i != null))}");
         Console.WriteLine($"Ticks elapsed (Delete): {result.Ticks}");
-        Console.WriteLine($"Ticks elapsed (Build): {sw.ElapsedTicks}");
-        Console.WriteLine($"Ticks elapsed (Total): {total}");
+        // Console.WriteLine($"Ticks elapsed (Build): {sw.ElapsedTicks}");
+        // Console.WriteLine($"Ticks elapsed (Total): {total}");
         Console.WriteLine("-------------------------------------------------------------------");
         Console.WriteLine("+++ Brute Force +++");
         Console.WriteLine($"Number of data blocks accessed: {linearResult.DataBlockAccessed}");

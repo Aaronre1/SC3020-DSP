@@ -128,7 +128,7 @@ public class Database
         {
             foreach (var record in block.Items)
             {
-                if (record.Key == key)
+                if (record.Key == key && !record.Deleted)
                 {
                     result.Records.Add(record);
                 }
@@ -151,7 +151,7 @@ public class Database
         {
             foreach (var record in block.Items)
             {
-                if (record.Key >= from && record.Key <= to)
+                if (record.Key >= from && record.Key <= to && !record.Deleted)
                 {
                     result.Records.Add(record);
                 }
