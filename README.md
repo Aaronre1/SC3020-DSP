@@ -3,6 +3,7 @@
 
 ## Configurations
 
-- Fixed record size at 73 bytes
+- Fixed record size at 74 bytes
 - Unspanned
 - Non-sequential file
+

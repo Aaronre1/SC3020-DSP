@@ -11,17 +11,7 @@ public class Experiments
     private BPlusTree _bPlusTree;
     private Database _database;
     private List<Record> _records;
-    private readonly DatabaseOptions _options;
-
-    public Experiments()
-    {
-        _options = new DatabaseOptions()
-        {
-            RecordSizeInBytes = 74,
-            BlockSizeInBytes = 400,
-            DiskCapacityInBytes = 500 * 1024 * 1024
-        };
-    }
+    private readonly DatabaseOptions _options = new DatabaseOptions();
 
     // Experiment 1
     public void Initialize()

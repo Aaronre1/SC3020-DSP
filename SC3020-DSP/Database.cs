@@ -23,11 +23,13 @@ public class Database
        // Console.WriteLine($"Initialized database with {_capacity} blocks capacity.");
         
         _dataBlockCapacity = (int)(options.BlockSizeInBytes / options.RecordSizeInBytes);
-        // nodeBlockCapacity = 400 - (pointer size) / (pointer size + key size)
+        // nodeBlockCapacity = [400 - (pointer size) - (delete flag)] / (pointer size + key size)
         _nodeBlockCapacity =
-            (int)((options.BlockSizeInBytes - options.PointerSizeInBytes) /
+            (int)((options.BlockSizeInBytes - options.PointerSizeInBytes - 1) /
                   (options.PointerSizeInBytes + sizeof(decimal)));
-        _bucketBlockCapacity = (int)(options.BlockSizeInBytes / options.PointerSizeInBytes);
+        // bucketBlockCapacity = [400 - (pointer size)] / (pointer size)
+        _bucketBlockCapacity = (int)((options.BlockSizeInBytes - options.PointerSizeInBytes) /
+                                     options.PointerSizeInBytes);
     }
 
     public int GetDataBlockCapacity() => _dataBlockCapacity;
